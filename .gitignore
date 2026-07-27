@@ -33,7 +33,12 @@ Tests/
 !tests/
 !tests/*.py
 
+# Local Dev
+TODO.md
+
+# Local Config
 Config/janus.yml
+
 # Local virtualenv (uv/pip)
 .venv/
 
