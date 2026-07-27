@@ -1,0 +1,137 @@
+{
+  "capabilities": [
+    "table-search",
+    "table-sort",
+    "table-filter",
+    "expandable-rows",
+    "safe-external-links",
+    "previous-runs"
+  ],
+  "data_quality": [
+    {
+      "analyzer_confidence_warnings": [
+        "Duration coverage is partial."
+      ],
+      "events_parsed": 12,
+      "fallback_task_ids": 0,
+      "invalid_record_counts": {},
+      "invalid_timestamps": 0,
+      "malformed_records": 0,
+      "processing_errors": [],
+      "retention_limitations": [],
+      "skipped_entries": 0,
+      "source": "mythic",
+      "source_limitations": [
+        "Partial task history."
+      ],
+      "status_distribution": {
+        "error": 1,
+        "other": 0,
+        "success": 5,
+        "unknown": 0
+      },
+      "suppression_reasons": {},
+      "unknown_status_percent": 0.0
+    }
+  ],
+  "generated_at": "2026-07-27T16:00:00Z",
+  "janus_version": "1.5.0-dev",
+  "previous_runs": [
+    {
+      "generated_at": "2026-07-26T16:00:00Z",
+      "label": "Previous run",
+      "link": {
+        "kind": "report",
+        "label": "Previous report",
+        "url": "operation-complete_20260726/report.html"
+      },
+      "run_id": "mythic-previous-41"
+    }
+  ],
+  "report_model_version": "1.0.0",
+  "retention": {
+    "arguments": "all",
+    "output": "all"
+  },
+  "revision": 1,
+  "run": {
+    "analysis_completed_at": "2026-07-27T16:00:00Z",
+    "analysis_started_at": "2026-07-27T15:59:00Z",
+    "janus_version": "1.5.0-dev",
+    "operation_id": "42",
+    "operation_name": "Operation Partial",
+    "operation_slug": "operation-complete",
+    "parser_version": "mythic-v1",
+    "result_count": 6,
+    "retention": {
+      "arguments": "all",
+      "output": "all"
+    },
+    "run_kind": "operation",
+    "status_distribution": {
+      "error": 1,
+      "other": 0,
+      "success": 5,
+      "unknown": 0
+    },
+    "task_count": 6
+  },
+  "run_id": "missing-analyzers",
+  "sections": [
+    {
+      "commands": [],
+      "confidence": "unknown",
+      "id": "command-duration",
+      "kind": "command-duration",
+      "sources": [
+        "mythic"
+      ],
+      "status": "missing",
+      "status_reason": "command-duration.json was not found.",
+      "title": "Command Duration",
+      "warnings": []
+    },
+    {
+      "callbacks": [],
+      "confidence": "unknown",
+      "id": "callback-health",
+      "kind": "callback-health",
+      "sources": [
+        "mythic"
+      ],
+      "status": "missing",
+      "status_reason": "callback-health.json was not found.",
+      "title": "Callback Health",
+      "warnings": []
+    }
+  ],
+  "sources": [
+    {
+      "endpoint_label": "mythic.local",
+      "kind": "mythic",
+      "parser_version": "mythic-v1",
+      "subtype": "graphql"
+    }
+  ],
+  "summary": {
+    "callback_count": 1,
+    "operation_count": 1,
+    "result_count": 6,
+    "span_seconds": 3600,
+    "status_distribution": {
+      "error": 1,
+      "other": 0,
+      "success": 5,
+      "unknown": 0
+    },
+    "task_count": 6
+  },
+  "warnings": [
+    {
+      "category": "source-limitation",
+      "code": "partial-export",
+      "message": "The Mythic export is partial.",
+      "source": "mythic"
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "capabilities": [
+    "table-search",
+    "table-sort",
+    "table-filter",
+    "expandable-rows",
+    "safe-external-links",
+    "previous-runs"
+  ],
+  "data_quality": [
+    {
+      "analyzer_confidence_warnings": [
+        "Result status is unavailable."
+      ],
+      "events_parsed": 12,
+      "fallback_task_ids": 0,
+      "invalid_record_counts": {},
+      "invalid_timestamps": 0,
+      "malformed_records": 0,
+      "processing_errors": [],
+      "retention_limitations": [],
+      "skipped_entries": 0,
+      "source": "ghostwriter",
+      "source_limitations": [
+        "Ghostwriter does not reliably preserve result status."
+      ],
+      "status_distribution": {
+        "error": 0,
+        "other": 0,
+        "success": 0,
+        "unknown": 6
+      },
+      "suppression_reasons": {
+        "callback-health": "Callback health requires resolved statuses.",
+        "command-failure-summary": "No resolved statuses.",
+        "command-retry-success": "No error-to-success transitions."
+      },
+      "unknown_status_percent": 100
+    }
+  ],
+  "generated_at": "2026-07-27T16:00:00Z",
+  "janus_version": "1.5.0-dev",
+  "previous_runs": [
+    {
+      "generated_at": "2026-07-26T16:00:00Z",
+      "label": "Previous run",
+      "link": {
+        "kind": "report",
+        "label": "Previous report",
+        "url": "operation-complete_20260726/report.html"
+      },
+      "run_id": "mythic-previous-41"
+    }
+  ],
+  "report_model_version": "1.0.0",
+  "retention": {
+    "arguments": "all",
+    "output": "all"
+  },
+  "revision": 1,
+  "run": {
+    "analysis_completed_at": "2026-07-27T16:00:00Z",
+    "analysis_started_at": "2026-07-27T15:59:00Z",
+    "janus_version": "1.5.0-dev",
+    "operation_id": "42",
+    "operation_name": "Ghostwriter Export",
+    "operation_slug": "operation-complete",
+    "parser_version": "mythic-v1",
+    "result_count": 6,
+    "retention": {
+      "arguments": "all",
+      "output": "all"
+    },
+    "run_kind": "operation",
+    "status_distribution": {
+      "error": 0,
+      "other": 0,
+      "success": 0,
+      "unknown": 6
+    },
+    "task_count": 6
+  },
+  "run_id": "ghostwriter-high-unknown",
+  "sections": [
+    {
+      "commands": [],
+      "confidence": "unknown",
+      "id": "command-failure-summary",
+      "kind": "command-failure-summary",
+      "sources": [
+        "ghostwriter"
+      ],
+      "status": "suppressed",
+      "status_reason": "No resolved statuses.",
+      "title": "Command Failure Summary",
+      "warnings": []
+    },
+    {
+      "confidence": "unknown",
+      "id": "command-retry-success",
+      "kind": "command-retry-success",
+      "sequences": [],
+      "sources": [
+        "ghostwriter"
+      ],
+      "status": "suppressed",
+      "status_reason": "No error-to-success transitions.",
+      "title": "Command Retry Success",
+      "warnings": []
+    },
+    {
+      "callbacks": [],
+      "confidence": "unknown",
+      "id": "callback-health",
+      "kind": "callback-health",
+      "sources": [
+        "ghostwriter"
+      ],
+      "status": "suppressed",
+      "status_reason": "Callback health requires resolved statuses.",
+      "title": "Callback Health",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "entries": [
+        {
+          "analyzer_confidence_warnings": [
+            "Result status is unavailable."
+          ],
+          "events_parsed": 12,
+          "fallback_task_ids": 0,
+          "invalid_record_counts": {},
+          "invalid_timestamps": 0,
+          "malformed_records": 0,
+          "processing_errors": [],
+          "retention_limitations": [],
+          "skipped_entries": 0,
+          "source": "ghostwriter",
+          "source_limitations": [
+            "Ghostwriter does not reliably preserve result status."
+          ],
+          "status_distribution": {
+            "error": 0,
+            "other": 0,
+            "success": 0,
+            "unknown": 6
+          },
+          "suppression_reasons": {
+            "callback-health": "Callback health requires resolved statuses.",
+            "command-failure-summary": "No resolved statuses.",
+            "command-retry-success": "No error-to-success transitions."
+          },
+          "unknown_status_percent": 100
+        }
+      ],
+      "id": "data-quality",
+      "kind": "data-quality",
+      "sources": [
+        "ghostwriter"
+      ],
+      "status": "available",
+      "title": "Data Quality",
+      "warnings": []
+    }
+  ],
+  "sources": [
+    {
+      "kind": "ghostwriter",
+      "parser_version": "ghostwriter-v1",
+      "subtype": "graphql"
+    }
+  ],
+  "summary": {
+    "callback_count": 1,
+    "operation_count": 1,
+    "result_count": 6,
+    "span_seconds": 3600,
+    "status_distribution": {
+      "error": 0,
+      "other": 0,
+      "success": 0,
+      "unknown": 6
+    },
+    "task_count": 6
+  },
+  "warnings": [
+    {
+      "category": "source-limitation",
+      "code": "unknown-status",
+      "message": "All result statuses are unknown.",
+      "source": "ghostwriter"
+    }
+  ]
+}

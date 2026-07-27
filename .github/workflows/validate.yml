@@ -1,0 +1,26 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  report-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install Janus and test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Check generated report-model artifacts
+        run: make schema-check
+      - name: Run report-model tests
+        run: pytest -q Tests/test_report_model.py Tests/test_report_fixtures.py

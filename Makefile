@@ -16,7 +16,7 @@ else
 CLI_OUT := ../../janus-cli
 endif
 
-.PHONY: build test shell clean help cli cli-all
+.PHONY: build test schema schema-check shell clean help cli cli-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -32,6 +32,12 @@ test: build ## Run the test suite inside the container
 		-v $(CURDIR):/src:ro \
 		-w /src \
 		$(IMAGE):$(TAG) -c "pip install -q pytest && pytest Tests/"
+
+schema: ## Generate report-model JSON Schema and TypeScript declarations
+	python3 scripts/generate_report_schema.py
+
+schema-check: ## Fail when generated report-model artifacts are stale
+	python3 scripts/generate_report_schema.py --check
 
 shell: build ## Open a shell in the container
 	docker run --rm -it --entrypoint /bin/bash \

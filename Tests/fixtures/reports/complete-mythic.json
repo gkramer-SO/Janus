@@ -1,0 +1,521 @@
+{
+  "capabilities": [
+    "table-search",
+    "table-sort",
+    "table-filter",
+    "expandable-rows",
+    "safe-external-links",
+    "previous-runs"
+  ],
+  "data_quality": [
+    {
+      "analyzer_confidence_warnings": [],
+      "events_parsed": 12,
+      "fallback_task_ids": 0,
+      "invalid_record_counts": {},
+      "invalid_timestamps": 0,
+      "malformed_records": 0,
+      "processing_errors": [],
+      "retention_limitations": [],
+      "skipped_entries": 0,
+      "source": "mythic",
+      "source_limitations": [],
+      "status_distribution": {
+        "error": 1,
+        "other": 0,
+        "success": 5,
+        "unknown": 0
+      },
+      "suppression_reasons": {},
+      "unknown_status_percent": 0.0
+    }
+  ],
+  "generated_at": "2026-07-27T16:00:00Z",
+  "janus_version": "1.5.0-dev",
+  "previous_runs": [
+    {
+      "generated_at": "2026-07-26T16:00:00Z",
+      "label": "Previous run",
+      "link": {
+        "kind": "report",
+        "label": "Previous report",
+        "url": "operation-complete_20260726/report.html"
+      },
+      "run_id": "mythic-previous-41"
+    }
+  ],
+  "report_model_version": "1.0.0",
+  "retention": {
+    "arguments": "all",
+    "output": "all"
+  },
+  "revision": 1,
+  "run": {
+    "analysis_completed_at": "2026-07-27T16:00:00Z",
+    "analysis_started_at": "2026-07-27T15:59:00Z",
+    "janus_version": "1.5.0-dev",
+    "operation_id": "42",
+    "operation_name": "Operation Complete",
+    "operation_slug": "operation-complete",
+    "parser_version": "mythic-v1",
+    "result_count": 6,
+    "retention": {
+      "arguments": "all",
+      "output": "all"
+    },
+    "run_kind": "operation",
+    "status_distribution": {
+      "error": 1,
+      "other": 0,
+      "success": 5,
+      "unknown": 0
+    },
+    "task_count": 6
+  },
+  "run_id": "mythic-complete-42",
+  "sections": [
+    {
+      "confidence": "high",
+      "id": "summary-visualization",
+      "kind": "summary-visualization",
+      "sources": [
+        "mythic"
+      ],
+      "span_seconds": 3600,
+      "status": "available",
+      "status_distribution": {
+        "error": 1,
+        "other": 0,
+        "success": 5,
+        "unknown": 0
+      },
+      "timeline": [
+        {
+          "count": 6,
+          "starts_at": "2026-07-27T15:00:00Z"
+        }
+      ],
+      "title": "Summary Analysis",
+      "warnings": []
+    },
+    {
+      "commands": [
+        {
+          "affected_callbacks": 1,
+          "command_name": "execute-assembly",
+          "error_count": 1,
+          "execution_count": 6,
+          "failure_rate": 0.16666666666666666,
+          "success_count": 5,
+          "unknown_count": 0
+        }
+      ],
+      "confidence": "high",
+      "id": "command-failure-summary",
+      "kind": "command-failure-summary",
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Command Failure Summary",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "id": "command-retry-success",
+      "kind": "command-retry-success",
+      "sequences": [
+        {
+          "attempts": 2,
+          "command_name": "execute-assembly",
+          "duration_seconds": 4.25,
+          "succeeded": true,
+          "tasks": [
+            {
+              "callback_id": "7",
+              "command_name": "execute-assembly",
+              "display_id": "100",
+              "link": {
+                "kind": "task",
+                "label": "Task 100",
+                "url": "https://mythic.local/new/task/100"
+              },
+              "task_id": "100",
+              "timestamp": "2026-07-27T15:00:00Z"
+            },
+            {
+              "callback_id": "7",
+              "command_name": "execute-assembly",
+              "display_id": "101",
+              "link": {
+                "kind": "task",
+                "label": "Task 101",
+                "url": "https://mythic.local/new/task/101"
+              },
+              "task_id": "101",
+              "timestamp": "2026-07-27T15:00:00Z"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Command Retry Success",
+      "warnings": []
+    },
+    {
+      "commands": [
+        {
+          "command_name": "execute-assembly",
+          "execution_count": 6,
+          "max_seconds": 4.25,
+          "median_seconds": 2.5,
+          "outlier_count": 1,
+          "p95_seconds": 4.1,
+          "slowest_task": {
+            "callback_id": "7",
+            "command_name": "execute-assembly",
+            "display_id": "101",
+            "link": {
+              "kind": "task",
+              "label": "Task 101",
+              "url": "https://mythic.local/new/task/101"
+            },
+            "task_id": "101",
+            "timestamp": "2026-07-27T15:00:00Z"
+          }
+        }
+      ],
+      "confidence": "high",
+      "id": "command-duration",
+      "kind": "command-duration",
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Command Duration",
+      "warnings": []
+    },
+    {
+      "candidates": [
+        {
+          "command_name": "execute-assembly",
+          "components": {
+            "duration": 25.83,
+            "failure_rate": 16.67
+          },
+          "confidence": "high",
+          "recommended_action": "investigate",
+          "sample_size": 6,
+          "score": 42.5
+        }
+      ],
+      "confidence": "high",
+      "id": "friction-score",
+      "kind": "friction-score",
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Top Friction Candidates",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "id": "outlier-context",
+      "kind": "outlier-context",
+      "outliers": [
+        {
+          "duration_seconds": 4.25,
+          "following": [],
+          "preceding": [
+            {
+              "callback_id": "7",
+              "command_name": "execute-assembly",
+              "display_id": "100",
+              "link": {
+                "kind": "task",
+                "label": "Task 100",
+                "url": "https://mythic.local/new/task/100"
+              },
+              "task_id": "100",
+              "timestamp": "2026-07-27T15:00:00Z"
+            }
+          ],
+          "sequence_signature": "sleep>execute-assembly",
+          "task": {
+            "callback_id": "7",
+            "command_name": "execute-assembly",
+            "display_id": "101",
+            "link": {
+              "kind": "task",
+              "label": "Task 101",
+              "url": "https://mythic.local/new/task/101"
+            },
+            "task_id": "101",
+            "timestamp": "2026-07-27T15:00:00Z"
+          }
+        }
+      ],
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Outlier Context",
+      "warnings": []
+    },
+    {
+      "callbacks": [
+        {
+          "callback_display_id": "7",
+          "callback_id": "7",
+          "consecutive_failure_count": 1,
+          "first_task_at": "2026-07-27T15:00:00Z",
+          "has_consecutive_failures": false,
+          "last_task_at": "2026-07-27T16:00:00Z",
+          "link": {
+            "kind": "callback",
+            "label": "Callback 7",
+            "url": "https://mythic.local/new/callbacks/7"
+          },
+          "task_count": 6,
+          "trailing_failures": []
+        }
+      ],
+      "confidence": "high",
+      "id": "callback-health",
+      "kind": "callback-health",
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Callback Health",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "detections": [
+        {
+          "matched_executables": [
+            "sensor.exe"
+          ],
+          "occurrence_count": 1,
+          "status": "observed",
+          "task": {
+            "callback_id": "7",
+            "command_name": "execute-assembly",
+            "display_id": "101",
+            "link": {
+              "kind": "task",
+              "label": "Task 101",
+              "url": "https://mythic.local/new/task/101"
+            },
+            "task_id": "101",
+            "timestamp": "2026-07-27T15:00:00Z"
+          },
+          "vendor": "Example EDR"
+        }
+      ],
+      "id": "av-tracker",
+      "kind": "av-tracker",
+      "scanned_task_count": 2,
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "AV Tracker",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "id": "dwell-time",
+      "kind": "dwell-time",
+      "max_seconds": 12.5,
+      "measurements": [
+        {
+          "dwell_seconds": 12.5,
+          "from_task": {
+            "callback_id": "7",
+            "command_name": "execute-assembly",
+            "display_id": "100",
+            "link": {
+              "kind": "task",
+              "label": "Task 100",
+              "url": "https://mythic.local/new/task/100"
+            },
+            "task_id": "100",
+            "timestamp": "2026-07-27T15:00:00Z"
+          },
+          "to_task": {
+            "callback_id": "7",
+            "command_name": "execute-assembly",
+            "display_id": "101",
+            "link": {
+              "kind": "task",
+              "label": "Task 101",
+              "url": "https://mythic.local/new/task/101"
+            },
+            "task_id": "101",
+            "timestamp": "2026-07-27T15:00:00Z"
+          }
+        }
+      ],
+      "median_seconds": 12.5,
+      "p95_seconds": 12.5,
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Dwell Time",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "findings": [
+        {
+          "detail": "An uncommon token structure was observed.",
+          "finding_type": "high-entropy-token",
+          "task": {
+            "callback_id": "7",
+            "command_name": "execute-assembly",
+            "display_id": "101",
+            "link": {
+              "kind": "task",
+              "label": "Task 101",
+              "url": "https://mythic.local/new/task/101"
+            },
+            "task_id": "101",
+            "timestamp": "2026-07-27T15:00:00Z"
+          },
+          "token_entropy": 4.2
+        }
+      ],
+      "id": "parameter-entropy",
+      "kind": "parameter-entropy",
+      "repeated_token_count": 0,
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Parameter Entropy",
+      "warnings": []
+    },
+    {
+      "commands_profiled": 1,
+      "confidence": "high",
+      "findings": [
+        {
+          "command_name": "execute-assembly",
+          "detail": "Position 0 was constant.",
+          "finding_type": "static-argument",
+          "occurrences": 6,
+          "position": 0,
+          "ratio": 1,
+          "sample_size": 6,
+          "tasks": [
+            {
+              "callback_id": "7",
+              "command_name": "execute-assembly",
+              "display_id": "101",
+              "link": {
+                "kind": "task",
+                "label": "Task 101",
+                "url": "https://mythic.local/new/task/101"
+              },
+              "task_id": "101",
+              "timestamp": "2026-07-27T15:00:00Z"
+            }
+          ]
+        }
+      ],
+      "id": "argument-position-profile",
+      "kind": "argument-position-profile",
+      "max_depth": 2,
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Argument Position Profile",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "groups": [
+        {
+          "artifact_path": "tool-dump/assembly-tools.ndjson",
+          "description": "Registry-selected assembly execution tasks.",
+          "id": "assembly-tools",
+          "match_count": 6,
+          "name": "Assembly tools",
+          "unique_command_count": 1
+        }
+      ],
+      "id": "tool-dump",
+      "kind": "tool-dump",
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Tool Dump",
+      "warnings": []
+    },
+    {
+      "confidence": "high",
+      "entries": [
+        {
+          "analyzer_confidence_warnings": [],
+          "events_parsed": 12,
+          "fallback_task_ids": 0,
+          "invalid_record_counts": {},
+          "invalid_timestamps": 0,
+          "malformed_records": 0,
+          "processing_errors": [],
+          "retention_limitations": [],
+          "skipped_entries": 0,
+          "source": "mythic",
+          "source_limitations": [],
+          "status_distribution": {
+            "error": 1,
+            "other": 0,
+            "success": 5,
+            "unknown": 0
+          },
+          "suppression_reasons": {},
+          "unknown_status_percent": 0.0
+        }
+      ],
+      "id": "data-quality",
+      "kind": "data-quality",
+      "sources": [
+        "mythic"
+      ],
+      "status": "available",
+      "title": "Data Quality",
+      "warnings": []
+    }
+  ],
+  "sources": [
+    {
+      "endpoint_label": "mythic.local",
+      "kind": "mythic",
+      "parser_version": "mythic-v1",
+      "subtype": "graphql"
+    }
+  ],
+  "summary": {
+    "callback_count": 1,
+    "operation_count": 1,
+    "result_count": 6,
+    "span_seconds": 3600,
+    "status_distribution": {
+      "error": 1,
+      "other": 0,
+      "success": 5,
+      "unknown": 0
+    },
+    "task_count": 6
+  },
+  "warnings": []
+}

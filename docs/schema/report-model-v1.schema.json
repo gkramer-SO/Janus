@@ -1,0 +1,2862 @@
+{
+  "$defs": {
+    "ArgumentPositionProfileSection": {
+      "additionalProperties": false,
+      "properties": {
+        "commands_profiled": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Commands Profiled",
+          "type": "integer"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/ArgumentProfileFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "argument-position-profile",
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_depth": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "ArgumentPositionProfileSection",
+      "type": "object"
+    },
+    "ArgumentProfileFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "finding_type": {
+          "title": "Finding Type",
+          "type": "string"
+        },
+        "occurrences": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Occurrences",
+          "type": "integer"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Position"
+        },
+        "ratio": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ratio"
+        },
+        "sample_size": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Sample Size",
+          "type": "integer"
+        },
+        "tasks": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Tasks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "command_name",
+        "finding_type",
+        "detail"
+      ],
+      "title": "ArgumentProfileFinding",
+      "type": "object"
+    },
+    "AvDetectionRow": {
+      "additionalProperties": false,
+      "properties": {
+        "matched_executables": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Matched Executables",
+          "type": "array"
+        },
+        "occurrence_count": {
+          "minimum": 1,
+          "title": "Occurrence Count",
+          "type": "integer"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "task": {
+          "$ref": "#/$defs/TaskRef"
+        },
+        "vendor": {
+          "title": "Vendor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vendor",
+        "occurrence_count",
+        "task"
+      ],
+      "title": "AvDetectionRow",
+      "type": "object"
+    },
+    "AvTrackerSection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "detections": {
+          "items": {
+            "$ref": "#/$defs/AvDetectionRow"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "av-tracker",
+          "title": "Kind",
+          "type": "string"
+        },
+        "scanned_task_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Scanned Task Count",
+          "type": "integer"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "AvTrackerSection",
+      "type": "object"
+    },
+    "CallbackHealthRow": {
+      "additionalProperties": false,
+      "properties": {
+        "callback_display_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Callback Display Id"
+        },
+        "callback_id": {
+          "title": "Callback Id",
+          "type": "string"
+        },
+        "consecutive_failure_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Consecutive Failure Count",
+          "type": "integer"
+        },
+        "first_task_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Task At"
+        },
+        "has_consecutive_failures": {
+          "default": false,
+          "title": "Has Consecutive Failures",
+          "type": "boolean"
+        },
+        "last_task_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Task At"
+        },
+        "link": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SafeLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "task_count": {
+          "minimum": 0,
+          "title": "Task Count",
+          "type": "integer"
+        },
+        "trailing_failures": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Trailing Failures",
+          "type": "array"
+        }
+      },
+      "required": [
+        "callback_id",
+        "task_count"
+      ],
+      "title": "CallbackHealthRow",
+      "type": "object"
+    },
+    "CallbackHealthSection": {
+      "additionalProperties": false,
+      "properties": {
+        "callbacks": {
+          "items": {
+            "$ref": "#/$defs/CallbackHealthRow"
+          },
+          "title": "Callbacks",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "callback-health",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "CallbackHealthSection",
+      "type": "object"
+    },
+    "Capability": {
+      "enum": [
+        "table-search",
+        "table-sort",
+        "table-filter",
+        "expandable-rows",
+        "safe-external-links",
+        "previous-runs",
+        "run-diff",
+        "live-revisions"
+      ],
+      "title": "Capability",
+      "type": "string"
+    },
+    "CommandDurationRow": {
+      "additionalProperties": false,
+      "properties": {
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "execution_count": {
+          "minimum": 0,
+          "title": "Execution Count",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Seconds"
+        },
+        "median_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Seconds"
+        },
+        "outlier_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Outlier Count",
+          "type": "integer"
+        },
+        "p95_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P95 Seconds"
+        },
+        "slowest_task": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "command_name",
+        "execution_count"
+      ],
+      "title": "CommandDurationRow",
+      "type": "object"
+    },
+    "CommandDurationSection": {
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "items": {
+            "$ref": "#/$defs/CommandDurationRow"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "command-duration",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "CommandDurationSection",
+      "type": "object"
+    },
+    "CommandFailureRow": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_callbacks": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Affected Callbacks",
+          "type": "integer"
+        },
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "error_count": {
+          "minimum": 0,
+          "title": "Error Count",
+          "type": "integer"
+        },
+        "execution_count": {
+          "minimum": 0,
+          "title": "Execution Count",
+          "type": "integer"
+        },
+        "failure_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Failure Rate"
+        },
+        "success_count": {
+          "minimum": 0,
+          "title": "Success Count",
+          "type": "integer"
+        },
+        "unknown_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unknown Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "command_name",
+        "execution_count",
+        "success_count",
+        "error_count"
+      ],
+      "title": "CommandFailureRow",
+      "type": "object"
+    },
+    "CommandFailureSection": {
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "items": {
+            "$ref": "#/$defs/CommandFailureRow"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "command-failure-summary",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "CommandFailureSection",
+      "type": "object"
+    },
+    "CommandRetrySection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "command-retry-success",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sequences": {
+          "items": {
+            "$ref": "#/$defs/RetrySequence"
+          },
+          "title": "Sequences",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "CommandRetrySection",
+      "type": "object"
+    },
+    "ComparabilityStatus": {
+      "enum": [
+        "comparable",
+        "comparable-with-warnings",
+        "not-comparable",
+        "unknown"
+      ],
+      "title": "ComparabilityStatus",
+      "type": "string"
+    },
+    "ConfidenceLevel": {
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    },
+    "DataQualityEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzer_confidence_warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Analyzer Confidence Warnings",
+          "type": "array"
+        },
+        "events_parsed": {
+          "minimum": 0,
+          "title": "Events Parsed",
+          "type": "integer"
+        },
+        "fallback_task_ids": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fallback Task Ids",
+          "type": "integer"
+        },
+        "invalid_record_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Invalid Record Counts",
+          "type": "object"
+        },
+        "invalid_timestamps": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Invalid Timestamps",
+          "type": "integer"
+        },
+        "malformed_records": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Malformed Records",
+          "type": "integer"
+        },
+        "processing_errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Processing Errors",
+          "type": "array"
+        },
+        "retention_limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Retention Limitations",
+          "type": "array"
+        },
+        "skipped_entries": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Skipped Entries",
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "source_limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Limitations",
+          "type": "array"
+        },
+        "status_distribution": {
+          "$ref": "#/$defs/StatusDistribution"
+        },
+        "suppression_reasons": {
+          "patternProperties": {
+            "^[A-Za-z0-9._:-]+$": {
+              "type": "string"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Suppression Reasons",
+          "type": "object"
+        },
+        "unknown_status_percent": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Unknown Status Percent",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source",
+        "events_parsed"
+      ],
+      "title": "DataQualityEntry",
+      "type": "object"
+    },
+    "DataQualitySection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/DataQualityEntry"
+          },
+          "title": "Entries",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "data-quality",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "DataQualitySection",
+      "type": "object"
+    },
+    "DiffClassification": {
+      "enum": [
+        "improvement",
+        "regression",
+        "low-confidence-change",
+        "not-comparable",
+        "unchanged"
+      ],
+      "title": "DiffClassification",
+      "type": "string"
+    },
+    "DiffFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline Value"
+        },
+        "candidate_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Value"
+        },
+        "classification": {
+          "$ref": "#/$defs/DiffClassification"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delta"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "metric_id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Metric Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric_id",
+        "entity_id",
+        "classification",
+        "confidence",
+        "explanation"
+      ],
+      "title": "DiffFinding",
+      "type": "object"
+    },
+    "DiffMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_run_id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Baseline Run Id",
+          "type": "string"
+        },
+        "candidate_run_id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Candidate Run Id",
+          "type": "string"
+        },
+        "comparability_status": {
+          "$ref": "#/$defs/ComparabilityStatus"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "baseline_run_id",
+        "candidate_run_id",
+        "comparability_status"
+      ],
+      "title": "DiffMetadata",
+      "type": "object"
+    },
+    "DwellRow": {
+      "additionalProperties": false,
+      "properties": {
+        "dwell_seconds": {
+          "minimum": 0,
+          "title": "Dwell Seconds",
+          "type": "number"
+        },
+        "from_task": {
+          "$ref": "#/$defs/TaskRef"
+        },
+        "to_task": {
+          "$ref": "#/$defs/TaskRef"
+        }
+      },
+      "required": [
+        "from_task",
+        "to_task",
+        "dwell_seconds"
+      ],
+      "title": "DwellRow",
+      "type": "object"
+    },
+    "DwellTimeSection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "dwell-time",
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Seconds"
+        },
+        "measurements": {
+          "items": {
+            "$ref": "#/$defs/DwellRow"
+          },
+          "title": "Measurements",
+          "type": "array"
+        },
+        "median_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Seconds"
+        },
+        "p95_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P95 Seconds"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "DwellTimeSection",
+      "type": "object"
+    },
+    "EntropyFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "finding_type": {
+          "title": "Finding Type",
+          "type": "string"
+        },
+        "task": {
+          "$ref": "#/$defs/TaskRef"
+        },
+        "token_entropy": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token Entropy"
+        }
+      },
+      "required": [
+        "task",
+        "finding_type",
+        "detail"
+      ],
+      "title": "EntropyFinding",
+      "type": "object"
+    },
+    "FrictionCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "components": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Components",
+          "type": "object"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "recommended_action": {
+          "title": "Recommended Action",
+          "type": "string"
+        },
+        "sample_size": {
+          "minimum": 0,
+          "title": "Sample Size",
+          "type": "integer"
+        },
+        "score": {
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "suppressed": {
+          "default": false,
+          "title": "Suppressed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "command_name",
+        "score",
+        "confidence",
+        "sample_size",
+        "recommended_action"
+      ],
+      "title": "FrictionCandidate",
+      "type": "object"
+    },
+    "FrictionScoreSection": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/FrictionCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "friction-score",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "FrictionScoreSection",
+      "type": "object"
+    },
+    "LinkKind": {
+      "enum": [
+        "callback",
+        "task",
+        "report",
+        "source"
+      ],
+      "title": "LinkKind",
+      "type": "string"
+    },
+    "OperationRef": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
+        "operation_name": {
+          "minLength": 1,
+          "title": "Operation Name",
+          "type": "string"
+        },
+        "operation_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Slug"
+        },
+        "result_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Result Count",
+          "type": "integer"
+        },
+        "task_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Task Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operation_name"
+      ],
+      "title": "OperationRef",
+      "type": "object"
+    },
+    "OutlierContextRow": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_seconds": {
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "number"
+        },
+        "following": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Following",
+          "type": "array"
+        },
+        "preceding": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Preceding",
+          "type": "array"
+        },
+        "sequence_signature": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Signature"
+        },
+        "task": {
+          "$ref": "#/$defs/TaskRef"
+        }
+      },
+      "required": [
+        "task",
+        "duration_seconds"
+      ],
+      "title": "OutlierContextRow",
+      "type": "object"
+    },
+    "OutlierContextSection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "outlier-context",
+          "title": "Kind",
+          "type": "string"
+        },
+        "outliers": {
+          "items": {
+            "$ref": "#/$defs/OutlierContextRow"
+          },
+          "title": "Outliers",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "OutlierContextSection",
+      "type": "object"
+    },
+    "ParameterEntropySection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/EntropyFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "parameter-entropy",
+          "title": "Kind",
+          "type": "string"
+        },
+        "repeated_token_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Repeated Token Count",
+          "type": "integer"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "ParameterEntropySection",
+      "type": "object"
+    },
+    "PreviousRunReference": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at": {
+          "title": "Generated At",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "link": {
+          "$ref": "#/$defs/SafeLink"
+        },
+        "run_id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Run Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "generated_at",
+        "label",
+        "link"
+      ],
+      "title": "PreviousRunReference",
+      "type": "object"
+    },
+    "ReportWarning": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/WarningCategory"
+        },
+        "code": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "section_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._:-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section Id"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code",
+        "category",
+        "message"
+      ],
+      "title": "ReportWarning",
+      "type": "object"
+    },
+    "RetentionRule": {
+      "enum": [
+        "all",
+        "none",
+        "drop",
+        "hash",
+        "features_only",
+        "errors_only",
+        "mixed",
+        "unknown"
+      ],
+      "title": "RetentionRule",
+      "type": "string"
+    },
+    "RetentionSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "$ref": "#/$defs/RetentionRule",
+          "default": "unknown"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observed_argument_rules": {
+          "items": {
+            "$ref": "#/$defs/RetentionRule"
+          },
+          "title": "Observed Argument Rules",
+          "type": "array"
+        },
+        "observed_output_rules": {
+          "items": {
+            "$ref": "#/$defs/RetentionRule"
+          },
+          "title": "Observed Output Rules",
+          "type": "array"
+        },
+        "output": {
+          "$ref": "#/$defs/RetentionRule",
+          "default": "unknown"
+        }
+      },
+      "title": "RetentionSettings",
+      "type": "object"
+    },
+    "RetrySequence": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "minimum": 1,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "succeeded": {
+          "title": "Succeeded",
+          "type": "boolean"
+        },
+        "tasks": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Tasks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "command_name",
+        "attempts",
+        "succeeded"
+      ],
+      "title": "RetrySequence",
+      "type": "object"
+    },
+    "RunDiffSection": {
+      "additionalProperties": false,
+      "properties": {
+        "comparability_status": {
+          "$ref": "#/$defs/ComparabilityStatus"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/DiffFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "run-diff",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind",
+        "comparability_status"
+      ],
+      "title": "RunDiffSection",
+      "type": "object"
+    },
+    "RunKind": {
+      "enum": [
+        "operation",
+        "multi-operation",
+        "diff"
+      ],
+      "title": "RunKind",
+      "type": "string"
+    },
+    "RunMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_completed_at": {
+          "title": "Analysis Completed At",
+          "type": "string"
+        },
+        "analysis_started_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Analysis Started At"
+        },
+        "janus_version": {
+          "minLength": 1,
+          "title": "Janus Version",
+          "type": "string"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
+        "operation_name": {
+          "minLength": 1,
+          "title": "Operation Name",
+          "type": "string"
+        },
+        "operation_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Slug"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/OperationRef"
+          },
+          "title": "Operations",
+          "type": "array"
+        },
+        "parser_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parser Version"
+        },
+        "result_count": {
+          "minimum": 0,
+          "title": "Result Count",
+          "type": "integer"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionSettings"
+        },
+        "run_kind": {
+          "$ref": "#/$defs/RunKind"
+        },
+        "status_distribution": {
+          "$ref": "#/$defs/StatusDistribution"
+        },
+        "task_count": {
+          "minimum": 0,
+          "title": "Task Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "run_kind",
+        "operation_name",
+        "analysis_completed_at",
+        "task_count",
+        "result_count",
+        "janus_version",
+        "retention"
+      ],
+      "title": "RunMetadata",
+      "type": "object"
+    },
+    "SafeLink": {
+      "additionalProperties": false,
+      "description": "A link already approved by the report builder.\n\nAbsolute links are restricted to HTTP(S); report links may be a simple\nrelative path.  Analyzer-controlled URI schemes are rejected.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/LinkKind"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "url": {
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "url",
+        "kind"
+      ],
+      "title": "SafeLink",
+      "type": "object"
+    },
+    "SectionStatus": {
+      "enum": [
+        "available",
+        "suppressed",
+        "missing",
+        "error"
+      ],
+      "title": "SectionStatus",
+      "type": "string"
+    },
+    "SourceInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoint_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Label"
+        },
+        "kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "parser_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parser Version"
+        },
+        "subtype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtype"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "SourceInfo",
+      "type": "object"
+    },
+    "SourceKind": {
+      "enum": [
+        "mythic",
+        "ghostwriter",
+        "cobaltstrike",
+        "outflank",
+        "multi-operation",
+        "mixed",
+        "unknown"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "StatusDistribution": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Error",
+          "type": "integer"
+        },
+        "other": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Other",
+          "type": "integer"
+        },
+        "success": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Success",
+          "type": "integer"
+        },
+        "unknown": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unknown",
+          "type": "integer"
+        }
+      },
+      "title": "StatusDistribution",
+      "type": "object"
+    },
+    "SummaryMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "callback_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Callback Count"
+        },
+        "operation_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Operation Count",
+          "type": "integer"
+        },
+        "result_count": {
+          "minimum": 0,
+          "title": "Result Count",
+          "type": "integer"
+        },
+        "span_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Seconds"
+        },
+        "status_distribution": {
+          "$ref": "#/$defs/StatusDistribution"
+        },
+        "task_count": {
+          "minimum": 0,
+          "title": "Task Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "task_count",
+        "result_count"
+      ],
+      "title": "SummaryMetrics",
+      "type": "object"
+    },
+    "SummaryVisualizationSection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "summary-visualization",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "span_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Seconds"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_distribution": {
+          "$ref": "#/$defs/StatusDistribution"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/$defs/TimelineBucket"
+          },
+          "title": "Timeline",
+          "type": "array"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "SummaryVisualizationSection",
+      "type": "object"
+    },
+    "TaskRef": {
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Arguments"
+        },
+        "callback_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Callback Id"
+        },
+        "command_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command Name"
+        },
+        "display_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Id"
+        },
+        "link": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SafeLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestamp"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "title": "TaskRef",
+      "type": "object"
+    },
+    "TimelineBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "starts_at": {
+          "title": "Starts At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "starts_at",
+        "count"
+      ],
+      "title": "TimelineBucket",
+      "type": "object"
+    },
+    "ToolDumpGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Path"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "match_count": {
+          "minimum": 0,
+          "title": "Match Count",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "unique_command_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unique Command Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "match_count"
+      ],
+      "title": "ToolDumpGroup",
+      "type": "object"
+    },
+    "ToolDumpSection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/ToolDumpGroup"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "tool-dump",
+          "title": "Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind"
+      ],
+      "title": "ToolDumpSection",
+      "type": "object"
+    },
+    "UnknownSection": {
+      "additionalProperties": false,
+      "description": "Lossless-enough fallback envelope for a section kind unknown to a UI.",
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fallback_message": {
+          "minLength": 1,
+          "title": "Fallback Message",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "unknown",
+          "title": "Kind",
+          "type": "string"
+        },
+        "original_kind": {
+          "minLength": 1,
+          "title": "Original Kind",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SectionStatus"
+        },
+        "status_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Reason"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/ReportWarning"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "kind",
+        "original_kind",
+        "fallback_message"
+      ],
+      "title": "UnknownSection",
+      "type": "object"
+    },
+    "WarningCategory": {
+      "enum": [
+        "source-limitation",
+        "retention-limitation",
+        "processing-error",
+        "comparability",
+        "analyzer-confidence"
+      ],
+      "title": "WarningCategory",
+      "type": "string"
+    }
+  },
+  "$id": "https://specterops.github.io/janus/schema/report-model-v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "capabilities": {
+      "items": {
+        "$ref": "#/$defs/Capability"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "data_quality": {
+      "items": {
+        "$ref": "#/$defs/DataQualityEntry"
+      },
+      "title": "Data Quality",
+      "type": "array"
+    },
+    "diff": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DiffMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generated_at": {
+      "title": "Generated At",
+      "type": "string"
+    },
+    "janus_version": {
+      "minLength": 1,
+      "title": "Janus Version",
+      "type": "string"
+    },
+    "previous_runs": {
+      "items": {
+        "$ref": "#/$defs/PreviousRunReference"
+      },
+      "title": "Previous Runs",
+      "type": "array"
+    },
+    "report_model_version": {
+      "default": "1.0.0",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "title": "Report Model Version",
+      "type": "string"
+    },
+    "retention": {
+      "$ref": "#/$defs/RetentionSettings"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "run": {
+      "$ref": "#/$defs/RunMetadata"
+    },
+    "run_id": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._:-]+$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "sections": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "argument-position-profile": "#/$defs/ArgumentPositionProfileSection",
+            "av-tracker": "#/$defs/AvTrackerSection",
+            "callback-health": "#/$defs/CallbackHealthSection",
+            "command-duration": "#/$defs/CommandDurationSection",
+            "command-failure-summary": "#/$defs/CommandFailureSection",
+            "command-retry-success": "#/$defs/CommandRetrySection",
+            "data-quality": "#/$defs/DataQualitySection",
+            "dwell-time": "#/$defs/DwellTimeSection",
+            "friction-score": "#/$defs/FrictionScoreSection",
+            "outlier-context": "#/$defs/OutlierContextSection",
+            "parameter-entropy": "#/$defs/ParameterEntropySection",
+            "run-diff": "#/$defs/RunDiffSection",
+            "summary-visualization": "#/$defs/SummaryVisualizationSection",
+            "tool-dump": "#/$defs/ToolDumpSection",
+            "unknown": "#/$defs/UnknownSection"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/SummaryVisualizationSection"
+          },
+          {
+            "$ref": "#/$defs/CommandFailureSection"
+          },
+          {
+            "$ref": "#/$defs/CommandRetrySection"
+          },
+          {
+            "$ref": "#/$defs/CommandDurationSection"
+          },
+          {
+            "$ref": "#/$defs/FrictionScoreSection"
+          },
+          {
+            "$ref": "#/$defs/OutlierContextSection"
+          },
+          {
+            "$ref": "#/$defs/CallbackHealthSection"
+          },
+          {
+            "$ref": "#/$defs/AvTrackerSection"
+          },
+          {
+            "$ref": "#/$defs/DwellTimeSection"
+          },
+          {
+            "$ref": "#/$defs/ParameterEntropySection"
+          },
+          {
+            "$ref": "#/$defs/ArgumentPositionProfileSection"
+          },
+          {
+            "$ref": "#/$defs/ToolDumpSection"
+          },
+          {
+            "$ref": "#/$defs/DataQualitySection"
+          },
+          {
+            "$ref": "#/$defs/RunDiffSection"
+          },
+          {
+            "$ref": "#/$defs/UnknownSection"
+          }
+        ]
+      },
+      "title": "Sections",
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceInfo"
+      },
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/SummaryMetrics"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/ReportWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "revision",
+    "generated_at",
+    "janus_version",
+    "run_id",
+    "run",
+    "sources",
+    "retention",
+    "summary"
+  ],
+  "title": "Janus Report Model v1",
+  "type": "object"
+}

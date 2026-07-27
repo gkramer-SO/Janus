@@ -1,0 +1,125 @@
+{
+  "capabilities": [
+    "table-search",
+    "table-sort",
+    "run-diff"
+  ],
+  "data_quality": [
+    {
+      "analyzer_confidence_warnings": [
+        "Duration coverage is partial."
+      ],
+      "events_parsed": 12,
+      "fallback_task_ids": 0,
+      "invalid_record_counts": {},
+      "invalid_timestamps": 0,
+      "malformed_records": 0,
+      "processing_errors": [],
+      "retention_limitations": [],
+      "skipped_entries": 0,
+      "source": "mythic",
+      "source_limitations": [
+        "Partial task history."
+      ],
+      "status_distribution": {
+        "error": 1,
+        "other": 0,
+        "success": 5,
+        "unknown": 0
+      },
+      "suppression_reasons": {},
+      "unknown_status_percent": 0.0
+    }
+  ],
+  "diff": {
+    "baseline_run_id": "baseline",
+    "candidate_run_id": "candidate",
+    "comparability_status": "comparable",
+    "warnings": []
+  },
+  "generated_at": "2026-07-27T16:00:00Z",
+  "janus_version": "1.5.0-dev",
+  "previous_runs": [],
+  "report_model_version": "1.0.0",
+  "retention": {
+    "arguments": "all",
+    "output": "all"
+  },
+  "revision": 1,
+  "run": {
+    "analysis_completed_at": "2026-07-27T16:00:00Z",
+    "analysis_started_at": "2026-07-27T15:59:00Z",
+    "janus_version": "1.5.0-dev",
+    "operation_id": "42",
+    "operation_name": "Baseline vs Candidate",
+    "operation_slug": "operation-complete",
+    "parser_version": "mythic-v1",
+    "result_count": 6,
+    "retention": {
+      "arguments": "all",
+      "output": "all"
+    },
+    "run_kind": "diff",
+    "status_distribution": {
+      "error": 1,
+      "other": 0,
+      "success": 5,
+      "unknown": 0
+    },
+    "task_count": 6
+  },
+  "run_id": "baseline-vs-candidate",
+  "sections": [
+    {
+      "comparability_status": "comparable",
+      "confidence": "high",
+      "findings": [
+        {
+          "baseline_value": 0.1,
+          "candidate_value": 0.2,
+          "classification": "regression",
+          "confidence": "high",
+          "delta": 0.1,
+          "entity_id": "execute-assembly",
+          "explanation": "Failure rate increased.",
+          "metric_id": "failure-rate"
+        }
+      ],
+      "id": "run-diff",
+      "kind": "run-diff",
+      "sources": [
+        "mixed"
+      ],
+      "status": "available",
+      "title": "Run Diff",
+      "warnings": []
+    }
+  ],
+  "sources": [
+    {
+      "kind": "mixed",
+      "subtype": "run-comparison"
+    }
+  ],
+  "summary": {
+    "callback_count": 1,
+    "operation_count": 1,
+    "result_count": 6,
+    "span_seconds": 3600,
+    "status_distribution": {
+      "error": 1,
+      "other": 0,
+      "success": 5,
+      "unknown": 0
+    },
+    "task_count": 6
+  },
+  "warnings": [
+    {
+      "category": "source-limitation",
+      "code": "partial-export",
+      "message": "The Mythic export is partial.",
+      "source": "mythic"
+    }
+  ]
+}
