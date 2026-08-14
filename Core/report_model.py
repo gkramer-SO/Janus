@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import StrEnum
+import re
 from typing import Annotated, Literal, TypeAlias
 
 from pydantic import (
@@ -25,7 +26,7 @@ from pydantic import (
 )
 
 
-REPORT_MODEL_VERSION = "1.0.0"
+REPORT_MODEL_VERSION = "1.1.0"
 ReportId = Annotated[str, StringConstraints(min_length=1, pattern=r"^[A-Za-z0-9._:-]+$")]
 JsonScalar: TypeAlias = str | int | float | bool | None
 
@@ -152,18 +153,39 @@ class SafeLink(StrictModel):
     url: str = Field(min_length=1)
     kind: LinkKind
 
-    @field_validator("url")
-    @classmethod
-    def _validate_url(cls, value: str) -> str:
+    @model_validator(mode="after")
+    def _validate_url(self) -> SafeLink:
         from urllib.parse import urlsplit
 
-        parsed = urlsplit(value)
+        parsed = urlsplit(self.url)
         if parsed.scheme:
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 raise ValueError("absolute links must use HTTP or HTTPS")
-        elif "\\" in value or value.startswith("/") or ".." in value.split("/"):
+            return self
+        if self.kind == LinkKind.REPORT and re.fullmatch(
+            r"\.\./[A-Za-z0-9._-]+/report\.html", self.url
+        ):
+            return self
+        if "\\" in self.url or self.url.startswith("/") or ".." in self.url.split("/"):
             raise ValueError("relative report links may not escape the report root")
-        return value
+        return self
+
+
+class TextPreview(StrictModel):
+    """Retention-aware display text prepared by the report builder."""
+
+    text: str | None = None
+    decoded: bool = False
+    binary: bool = False
+    truncated: bool = False
+    original_length: int = Field(default=0, ge=0)
+    retention: RetentionRule = RetentionRule.UNKNOWN
+
+    @model_validator(mode="after")
+    def _binary_has_no_text(self) -> TextPreview:
+        if self.binary and self.text is not None:
+            raise ValueError("binary previews may not embed text")
+        return self
 
 
 class RetentionSettings(StrictModel):
@@ -247,14 +269,72 @@ class TimelineBucket(StrictModel):
     count: int = Field(ge=0)
 
 
+class RetryTransition(StrictModel):
+    from_attempt: int = Field(ge=1)
+    to_attempt: int = Field(ge=2)
+    changes: list[str] = Field(default_factory=list)
+    note: str | None = None
+
+
+class FrictionDriver(StrictModel):
+    component: str
+    value: float
+    impact: float
+    label: str
+
+
+class RepeatedEntropyToken(StrictModel):
+    token_prefix: str
+    entropy_mean: float | None = Field(default=None, ge=0)
+    occurrences: int = Field(ge=0)
+    task_ids: list[str] = Field(default_factory=list)
+    commands: list[str] = Field(default_factory=list)
+    detail: str
+
+
+class ArgumentDepthRow(StrictModel):
+    command_name: str
+    task_count: int = Field(default=0, ge=0)
+    min_depth: int = Field(default=0, ge=0)
+    max_depth: int = Field(default=0, ge=0)
+    mean_depth: float = Field(default=0, ge=0)
+
+
+class ArgumentCommandProfile(StrictModel):
+    command_name: str
+    task_count: int = Field(default=0, ge=0)
+    positions: int = Field(default=0, ge=0)
+
+
+class DiffSummary(StrictModel):
+    likely_regressions: int = Field(default=0, ge=0)
+    likely_improvements: int = Field(default=0, ge=0)
+    low_confidence_changes: int = Field(default=0, ge=0)
+    not_comparable: int = Field(default=0, ge=0)
+
+
+class DiffEntityPresence(StrictModel):
+    entity_type: str
+    entity_id: str
+    count: int = Field(default=0, ge=0)
+
+
 class TaskRef(StrictModel):
     task_id: str
     display_id: str | None = None
     callback_id: str | None = None
     command_name: str | None = None
     arguments: str | None = None
+    argument_preview: TextPreview | None = None
     timestamp: UtcDatetime | None = None
     link: SafeLink | None = None
+
+
+class FailureDetail(StrictModel):
+    task: TaskRef
+    status: str = "unknown"
+    dispatch_failed: bool = False
+    output_preview: TextPreview | None = None
 
 
 class CommandFailureRow(StrictModel):
@@ -265,6 +345,7 @@ class CommandFailureRow(StrictModel):
     unknown_count: int = Field(default=0, ge=0)
     failure_rate: float | None = Field(default=None, ge=0, le=1)
     affected_callbacks: int = Field(default=0, ge=0)
+    failures: list[FailureDetail] = Field(default_factory=list)
 
 
 class RetrySequence(StrictModel):
@@ -273,6 +354,9 @@ class RetrySequence(StrictModel):
     succeeded: bool
     duration_seconds: float | None = Field(default=None, ge=0)
     tasks: list[TaskRef] = Field(default_factory=list)
+    final_status: str | None = None
+    transitions: list[RetryTransition] = Field(default_factory=list)
+    intervening_tasks: list[TaskRef] = Field(default_factory=list)
 
 
 class CommandDurationRow(StrictModel):
@@ -281,8 +365,11 @@ class CommandDurationRow(StrictModel):
     median_seconds: float | None = Field(default=None, ge=0)
     p95_seconds: float | None = Field(default=None, ge=0)
     max_seconds: float | None = Field(default=None, ge=0)
+    mean_seconds: float | None = Field(default=None, ge=0)
+    min_seconds: float | None = Field(default=None, ge=0)
     outlier_count: int = Field(default=0, ge=0)
     slowest_task: TaskRef | None = None
+    outlier_tasks: list[TaskRef] = Field(default_factory=list)
 
 
 class FrictionCandidate(StrictModel):
@@ -293,6 +380,9 @@ class FrictionCandidate(StrictModel):
     recommended_action: str
     suppressed: bool = False
     components: dict[str, float] = Field(default_factory=dict)
+    confidence_reasons: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    drivers: list[FrictionDriver] = Field(default_factory=list)
 
 
 class OutlierContextRow(StrictModel):
@@ -307,11 +397,16 @@ class CallbackHealthRow(StrictModel):
     callback_id: str
     callback_display_id: str | None = None
     task_count: int = Field(ge=0)
+    success_count: int = Field(default=0, ge=0)
+    error_count: int = Field(default=0, ge=0)
+    unknown_count: int = Field(default=0, ge=0)
+    completion_rate: float | None = Field(default=None, ge=0, le=1)
     consecutive_failure_count: int = Field(default=0, ge=0)
     has_consecutive_failures: bool = False
     first_task_at: UtcDatetime | None = None
     last_task_at: UtcDatetime | None = None
     trailing_failures: list[TaskRef] = Field(default_factory=list)
+    last_successful_task: TaskRef | None = None
     link: SafeLink | None = None
 
 
@@ -354,6 +449,7 @@ class ToolDumpGroup(StrictModel):
     match_count: int = Field(ge=0)
     unique_command_count: int = Field(default=0, ge=0)
     artifact_path: str | None = None
+    entries: list[TaskRef] = Field(default_factory=list)
 
 
 class DiffFinding(StrictModel):
@@ -438,6 +534,7 @@ class ParameterEntropySection(SectionBase):
     kind: Literal["parameter-entropy"]
     findings: list[EntropyFinding] = Field(default_factory=list)
     repeated_token_count: int = Field(default=0, ge=0)
+    repeated_tokens: list[RepeatedEntropyToken] = Field(default_factory=list)
 
 
 class ArgumentPositionProfileSection(SectionBase):
@@ -445,6 +542,8 @@ class ArgumentPositionProfileSection(SectionBase):
     findings: list[ArgumentProfileFinding] = Field(default_factory=list)
     commands_profiled: int = Field(default=0, ge=0)
     max_depth: int = Field(default=0, ge=0)
+    depth_distribution: list[ArgumentDepthRow] = Field(default_factory=list)
+    command_profiles: list[ArgumentCommandProfile] = Field(default_factory=list)
 
 
 class ToolDumpSection(SectionBase):
@@ -461,6 +560,9 @@ class RunDiffSection(SectionBase):
     kind: Literal["run-diff"]
     findings: list[DiffFinding] = Field(default_factory=list)
     comparability_status: ComparabilityStatus
+    summary: DiffSummary | None = None
+    new_entities: list[DiffEntityPresence] = Field(default_factory=list)
+    removed_entities: list[DiffEntityPresence] = Field(default_factory=list)
 
 
 class UnknownSection(SectionBase):

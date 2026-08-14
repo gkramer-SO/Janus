@@ -258,6 +258,12 @@ func dockerMount(hostPath, containerPath string, readonly bool) []string {
 }
 
 func dockerRun(args []string, interactive bool, cliDockerNetwork, cliDockerAddHost string) error {
+	return dockerRunWithHostArgs(args, nil, interactive, cliDockerNetwork, cliDockerAddHost)
+}
+
+// dockerRunWithHostArgs allows commands to add Docker-engine options such as
+// loopback-only port publishing while preserving the standard Janus mounts.
+func dockerRunWithHostArgs(args []string, hostArgs []string, interactive bool, cliDockerNetwork, cliDockerAddHost string) error {
 	if err := ensureDockerAvailable(); err != nil {
 		return err
 	}
@@ -274,6 +280,7 @@ func dockerRun(args []string, interactive bool, cliDockerNetwork, cliDockerAddHo
 		cmdArgs = append(cmdArgs, "-it")
 	}
 	cmdArgs = append(cmdArgs, extras...)
+	cmdArgs = append(cmdArgs, hostArgs...)
 
 	cwd, err := os.Getwd()
 	if err != nil {

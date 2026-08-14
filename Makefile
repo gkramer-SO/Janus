@@ -16,7 +16,7 @@ else
 CLI_OUT := ../../janus-cli
 endif
 
-.PHONY: build test schema schema-check shell clean help cli cli-all
+.PHONY: build test schema schema-check shell clean help cli cli-all web-install web-build web-test test-dashboard serve
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -38,6 +38,20 @@ schema: ## Generate report-model JSON Schema and TypeScript declarations
 
 schema-check: ## Fail when generated report-model artifacts are stale
 	python3 scripts/generate_report_schema.py --check
+
+web-install: ## Install locked dashboard dependencies
+	npm --prefix dashboard ci
+
+web-build: ## Type-check and build the dashboard
+	npm --prefix dashboard run build
+
+web-test: ## Run dashboard unit tests
+	npm --prefix dashboard run test
+
+test-dashboard: web-test ## Alias for dashboard unit tests
+
+serve: build ## Start the local dashboard through Docker Compose
+	docker compose up --build janus
 
 shell: build ## Open a shell in the container
 	docker run --rm -it --entrypoint /bin/bash \

@@ -61,7 +61,8 @@ def test_report_model_version_is_semver() -> None:
     [
         "javascript:alert(1)",
         "file:///etc/passwd",
-        "../other-run/report.html",
+        "../../other-run/report.html",
+        "../other-run/other.html",
         "/absolute/report.html",
         r"..\\other-run\\report.html",
     ],
@@ -71,6 +72,12 @@ def test_links_reject_unsafe_urls(url: str) -> None:
     payload["previous_runs"][0]["link"]["url"] = url
     with pytest.raises(ValidationError, match="link|url|HTTP|escape|relative"):
         ReportModel.model_validate(payload)
+
+
+def test_previous_report_link_allows_a_single_safe_sibling() -> None:
+    payload = _fixture()
+    payload["previous_runs"][0]["link"]["url"] = "../other-run/report.html"
+    assert ReportModel.model_validate(payload).previous_runs[0].link.url == "../other-run/report.html"
 
 
 def test_unknown_section_requires_explicit_fallback() -> None:

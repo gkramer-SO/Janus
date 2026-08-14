@@ -22,6 +22,7 @@ Commands:
   pull           Pull data from Mythic, Ghostwriter, Cobalt Strike, or Outflank
   analyze        Run analyzers against the latest pull (or --events <path>)
   report         Generate HTML report from the latest analysis
+  serve          Start the local read-only dashboard
   run            Pull + analyze + report in one shot for any supported source
   merge          Merge multiple operations into a unified dataset
   multi-analyze  Merge + run the multi-op analyzer set + report
@@ -43,6 +44,7 @@ Examples:
   janus-cli analyze --events out/events.ndjson        # analyze a specific events file
   janus-cli analyze --analyzer command-failure-summary
   janus-cli report                                    # report on latest analysis
+  janus-cli serve                                     # local dashboard on 127.0.0.1:8000
   janus-cli report --json out/complete/operation-bofdev_20260318_140203
   janus-cli merge --pattern "partial/*/" --output out/combined/
   janus-cli diff --baseline out/complete/op_old --candidate out/complete/op_new
@@ -90,6 +92,8 @@ func main() {
 		rc = cmdAnalyze(args)
 	case "report":
 		rc = cmdReport(args)
+	case "serve":
+		rc = cmdServe(args)
 	case "run":
 		rc = cmdRun(args)
 	case "merge":
@@ -545,6 +549,131 @@ func cmdReport(args []string) int {
 	return 0
 }
 
+func normalizeServeBind(value string) (string, error) {
+	bind := strings.TrimSpace(value)
+	if bind == "" || bind == "localhost" {
+		return "127.0.0.1", nil
+	}
+	if bind != "127.0.0.1" {
+		return "", fmt.Errorf("--bind must be localhost or 127.0.0.1; remote dashboard exposure is not supported")
+	}
+	return bind, nil
+}
+
+func cmdServe(args []string) int {
+	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	runDir := fs.String("run-dir", "", "Limit the dashboard to one Janus run directory under out/")
+	latest := fs.Bool("latest", false, "Select the latest available run (default behavior)")
+	port := fs.Int("port", 8000, "Local dashboard port")
+	bind := fs.String("bind", "127.0.0.1", "Host bind address; localhost only")
+	noBuild := fs.Bool("no-build", false, "Skip Docker image rebuild")
+	debug := fs.Bool("debug", false, "Enable verbose server logging")
+	live := fs.Bool("live", false, "Continuously refresh a source-backed live run")
+	source := fs.String("source", "", "Live source: mythic, ghostwriter, cobaltstrike, or outflank")
+	opID := fs.Int("op-id", 0, "Live operation/oplog ID override")
+	oplogID := fs.Int("oplog-id", 0, "Live Ghostwriter oplog ID override")
+	endpoint := fs.String("endpoint", "", "Live source endpoint override")
+	apiToken := fs.String("api-token", "", "Live source API token override")
+	username := fs.String("username", "", "Live Cobalt Strike username override")
+	password := fs.String("password", "", "Live Cobalt Strike password override")
+	durationMS := fs.Int("duration-ms", 0, "Live Cobalt Strike token lifetime")
+	opName := fs.String("operation-name", "", "Live Cobalt Strike/Outflank operation name")
+	logPath := fs.String("log-path", "", "Live Outflank log file or directory under out/")
+	insecure := fs.Bool("insecure", false, "Disable TLS verification for live source access")
+	pollInterval := fs.Float64("poll-interval", 30, "Seconds between live source polls")
+	analysisDebounce := fs.Float64("analysis-debounce", 2, "Seconds to coalesce changes before analysis")
+	dockerNet, dockerAddHost := bindDockerRunFlags(fs)
+	fs.Parse(args)
+
+	if *port < 1 || *port > 65535 {
+		fmt.Fprintln(os.Stderr, "error: --port must be between 1 and 65535")
+		return 1
+	}
+	if *pollInterval <= 0 || *analysisDebounce < 0 {
+		fmt.Fprintln(os.Stderr, "error: --poll-interval must be > 0 and --analysis-debounce must be >= 0")
+		return 1
+	}
+	publishedBind, err := normalizeServeBind(*bind)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return 1
+	}
+	if *latest && strings.TrimSpace(*runDir) != "" {
+		fmt.Fprintln(os.Stderr, "error: --latest and --run-dir cannot be used together")
+		return 1
+	}
+
+	containerArgs := []string{"serve", "--output-root", "/data/out", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", *port)}
+	if *live {
+		containerArgs = append(containerArgs, "--live", "--config", "/config/janus.yml", "--poll-interval", fmt.Sprintf("%g", *pollInterval), "--analysis-debounce", fmt.Sprintf("%g", *analysisDebounce))
+		if strings.TrimSpace(*source) != "" {
+			containerArgs = append(containerArgs, "--source", strings.TrimSpace(*source))
+		}
+		if *opID > 0 {
+			containerArgs = append(containerArgs, "--operation-id", fmt.Sprintf("%d", *opID))
+		}
+		if *oplogID > 0 {
+			containerArgs = append(containerArgs, "--oplog-id", fmt.Sprintf("%d", *oplogID))
+		}
+		if strings.TrimSpace(*endpoint) != "" {
+			containerArgs = append(containerArgs, "--endpoint", strings.TrimSpace(*endpoint))
+		}
+		if strings.TrimSpace(*apiToken) != "" {
+			containerArgs = append(containerArgs, "--api-token", strings.TrimSpace(*apiToken))
+		}
+		if strings.TrimSpace(*username) != "" {
+			containerArgs = append(containerArgs, "--username", strings.TrimSpace(*username))
+		}
+		if strings.TrimSpace(*password) != "" {
+			containerArgs = append(containerArgs, "--password", strings.TrimSpace(*password))
+		}
+		if *durationMS > 0 {
+			containerArgs = append(containerArgs, "--duration-ms", fmt.Sprintf("%d", *durationMS))
+		}
+		if strings.TrimSpace(*opName) != "" {
+			containerArgs = append(containerArgs, "--operation-name", strings.TrimSpace(*opName))
+		}
+		if *insecure {
+			containerArgs = append(containerArgs, "--insecure")
+		}
+		if strings.TrimSpace(*logPath) != "" {
+			containerLogPath, err := resolveAnyPathUnderOutForDocker(*logPath, true)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				return 1
+			}
+			containerArgs = append(containerArgs, "--log-path", containerLogPath)
+		}
+	}
+	if strings.TrimSpace(*runDir) != "" {
+		containerRun, err := resolvePathUnderOutForDocker(*runDir, true, true)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			return 1
+		}
+		containerArgs = append(containerArgs, "--run-dir", containerRun)
+	}
+	if *debug {
+		containerArgs = append(containerArgs, "--debug")
+	}
+
+	if !*noBuild {
+		if err := buildImage(); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			return 1
+		}
+	}
+
+	url := fmt.Sprintf("http://%s:%d", publishedBind, *port)
+	fmt.Printf("Janus dashboard: %s\n", url)
+	fmt.Fprintln(os.Stderr, "Press Ctrl+C to stop the local dashboard container.")
+	hostArgs := []string{"--init", "-p", fmt.Sprintf("%s:%d:%d", publishedBind, *port, *port)}
+	if err := dockerRunWithHostArgs(containerArgs, hostArgs, false, *dockerNet, *dockerAddHost); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return 1
+	}
+	return 0
+}
 func cmdDiff(args []string) int {
 	fs := flag.NewFlagSet("diff", flag.ExitOnError)
 	baseline := fs.String("baseline", "", "Baseline Janus run directory under out/")

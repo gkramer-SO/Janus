@@ -13,6 +13,15 @@ The main boundaries are:
 - CLI path inputs for `--events`, `merge`, and `multi-analyze` must resolve under `out/`
 - TLS verification enabled by default; `verify_tls: false` or `--insecure` are explicit escape hatches
 
+## Deployment lifecycle
+
+Janus is deployed through the host-side `janus-cli` Docker wrapper, not as an always-on host service. Normal commands (`pull`, `analyze`, `report`, and `run`) start one disposable container for the requested job and exit when it completes. Persisted artifacts remain in the host `./out` mount.
+
+`janus-cli serve` is the deliberate exception: it starts one long-lived FastAPI/Uvicorn container for the local dashboard. The wrapper mounts `./Config` read-only at `/config`, mounts `./out` read/write at `/data/out`, publishes `127.0.0.1:<port>` to the container's port 8000, and waits for the container to exit. The server binds to `0.0.0.0` only inside the container; the host-side wrapper rejects remote binds. This is a local observation/reporting service, not a remotely exposed or C2-tasking service.
+
+With `serve --live`, the server starts one bounded worker for the selected source-backed run. Each poll reuses the existing source ingest implementation in an isolated staging directory, validates the normalized `events.ndjson` and `bundle.json`, and atomically promotes the complete snapshot only after a successful pull. This intentionally favors correct retention and source fidelity over a second, dashboard-specific client. The worker checkpoints snapshot provenance in `live-state.json`, debounces analyzer runs, preserves the last known-good report when ingest or analysis fails, and emits bounded SSE revision notifications for the served dashboard. Static reports remain immutable snapshots.
+
+The same Preact dashboard supports two modes: served mode fetches `report-model.json` through the same-origin API, while `janus report` embeds that validated model and compiled assets in a portable static `report.html`. Static reports do not require the server or network access.
 ## Docker wrapper networking
 
 `janus-cli` does not run Python on the host by default: it builds a standard `docker run` with bind mounts (`./out` → `/data/out`, `./Config` → `/config`) and passes the Janus subcommand (`run`, `pull`, `analyze`, and so on) to the image entrypoint.

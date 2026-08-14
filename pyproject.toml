@@ -10,14 +10,16 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115,<1",
     "pydantic>=2.8,<3",
     "requests>=2.31.0",
     "urllib3>=2.0.0",
+    "uvicorn>=0.30,<1",
     "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=7.4.0", "jsonschema>=4.23"]
+test = ["pytest>=7.4.0", "jsonschema>=4.23", "httpx2>=0.1"]
 
 [project.scripts]
 janus = "janus:main"
@@ -26,7 +28,8 @@ janus = "janus:main"
 py-modules = ["janus"]
 
 [tool.setuptools.packages.find]
-include = ["Analyzers*", "Core*", "Parsers*", "Config*"]
+include = ["Analyzers*", "Core*", "Parsers*", "Config*", "Server*"]
 
 [tool.setuptools.package-data]
 "Config" = ["*.yml"]
+"Server" = ["assets/*.html", "assets/assets/*.js", "assets/assets/*.css"]

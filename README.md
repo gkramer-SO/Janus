@@ -40,6 +40,27 @@ cp Config/janus.example.yml Config/janus.yml # set source, redaction settings, e
 ./janus-cli config # print active configuration
 ```
 
+## Local Dashboard
+
+`janus-cli serve` starts the one long-lived Janus container: a local, read-only dashboard at `http://127.0.0.1:8000`. It discovers completed runs under `out/` and serves the validated `report-model.json` contract. Press `Ctrl+C` to stop the container.
+
+```bash
+./janus-cli serve
+./janus-cli serve --run-dir out/complete/<run-directory>
+./janus-cli serve --port 8080
+```
+
+The host-side wrapper publishes only to loopback and rejects remote `--bind` values. The app listens inside the container only so Docker can forward that local port. This does not change the ordinary workflow: `pull`, `analyze`, `report`, and `run` each launch a one-shot container and exit when finished. Source endpoints in `Config/janus.yml` must remain reachable from the container; on Docker Desktop, use `host.docker.internal` for an API running on the host.
+
+Live mode starts one continuously refreshed run and remains local-only. It reuses the configured Mythic, Ghostwriter, Cobalt Strike REST, or Outflank ingest path in bounded full-snapshot polls, applies the same retention policy, then reruns the existing analyzers after the configured debounce period. The first snapshot is completed before the dashboard opens; later source or analysis failures leave the previous report available and surface a degraded status.
+
+```bash
+./janus-cli serve --live --source mythic --op-id 42 --poll-interval 30 --analysis-debounce 2
+./janus-cli serve --live --source cobaltstrike --op-id 1
+./janus-cli serve --live --source outflank --log-path out/input/implant_logs
+```
+
+`janus-cli report` continues to produce a portable, self-contained `report.html` plus `report-model.json`; it does not require a dashboard server or internet connection to open.
 ## Demo 
 
 <p align="center">
@@ -107,7 +128,8 @@ Retention policies (`output_rule` and `arguments_rule`) control what normalized 
 
 ## Outputs
 
-- `report.html` - visual HTML report, including a Data Quality section with source/parser confidence warnings
+- `report-model.json` - validated, versioned dashboard/report contract
+- `report.html` - self-contained static dashboard snapshot, including source/parser confidence warnings
 - `bundle.json` - versioned JSON metadata for automation and downstream tooling, including structured `data_quality`
 - `events.ndjson` - normalized event stream for debugging, replay, and testing
 

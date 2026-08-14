@@ -1,8 +1,79 @@
 {
   "$defs": {
+    "ArgumentCommandProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "positions": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Positions",
+          "type": "integer"
+        },
+        "task_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Task Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "command_name"
+      ],
+      "title": "ArgumentCommandProfile",
+      "type": "object"
+    },
+    "ArgumentDepthRow": {
+      "additionalProperties": false,
+      "properties": {
+        "command_name": {
+          "title": "Command Name",
+          "type": "string"
+        },
+        "max_depth": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "mean_depth": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Mean Depth",
+          "type": "number"
+        },
+        "min_depth": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Min Depth",
+          "type": "integer"
+        },
+        "task_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Task Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "command_name"
+      ],
+      "title": "ArgumentDepthRow",
+      "type": "object"
+    },
     "ArgumentPositionProfileSection": {
       "additionalProperties": false,
       "properties": {
+        "command_profiles": {
+          "items": {
+            "$ref": "#/$defs/ArgumentCommandProfile"
+          },
+          "title": "Command Profiles",
+          "type": "array"
+        },
         "commands_profiled": {
           "default": 0,
           "minimum": 0,
@@ -19,6 +90,13 @@
             }
           ],
           "default": null
+        },
+        "depth_distribution": {
+          "items": {
+            "$ref": "#/$defs/ArgumentDepthRow"
+          },
+          "title": "Depth Distribution",
+          "type": "array"
         },
         "findings": {
           "items": {
@@ -302,10 +380,30 @@
           "title": "Callback Id",
           "type": "string"
         },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
         "consecutive_failure_count": {
           "default": 0,
           "minimum": 0,
           "title": "Consecutive Failure Count",
+          "type": "integer"
+        },
+        "error_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Error Count",
           "type": "integer"
         },
         "first_task_at": {
@@ -324,6 +422,17 @@
           "default": false,
           "title": "Has Consecutive Failures",
           "type": "boolean"
+        },
+        "last_successful_task": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "last_task_at": {
           "anyOf": [
@@ -348,6 +457,12 @@
           ],
           "default": null
         },
+        "success_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Success Count",
+          "type": "integer"
+        },
         "task_count": {
           "minimum": 0,
           "title": "Task Count",
@@ -359,6 +474,12 @@
           },
           "title": "Trailing Failures",
           "type": "array"
+        },
+        "unknown_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unknown Count",
+          "type": "integer"
         }
       },
       "required": [
@@ -483,6 +604,19 @@
           "default": null,
           "title": "Max Seconds"
         },
+        "mean_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Seconds"
+        },
         "median_seconds": {
           "anyOf": [
             {
@@ -496,11 +630,31 @@
           "default": null,
           "title": "Median Seconds"
         },
+        "min_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Seconds"
+        },
         "outlier_count": {
           "default": 0,
           "minimum": 0,
           "title": "Outlier Count",
           "type": "integer"
+        },
+        "outlier_tasks": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Outlier Tasks",
+          "type": "array"
         },
         "p95_seconds": {
           "anyOf": [
@@ -646,6 +800,13 @@
           ],
           "default": null,
           "title": "Failure Rate"
+        },
+        "failures": {
+          "items": {
+            "$ref": "#/$defs/FailureDetail"
+          },
+          "title": "Failures",
+          "type": "array"
         },
         "success_count": {
           "minimum": 0,
@@ -1027,6 +1188,31 @@
       "title": "DiffClassification",
       "type": "string"
     },
+    "DiffEntityPresence": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "title": "Entity Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_type",
+        "entity_id"
+      ],
+      "title": "DiffEntityPresence",
+      "type": "object"
+    },
     "DiffFinding": {
       "additionalProperties": false,
       "properties": {
@@ -1147,6 +1333,37 @@
         "comparability_status"
       ],
       "title": "DiffMetadata",
+      "type": "object"
+    },
+    "DiffSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "likely_improvements": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Likely Improvements",
+          "type": "integer"
+        },
+        "likely_regressions": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Likely Regressions",
+          "type": "integer"
+        },
+        "low_confidence_changes": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Low Confidence Changes",
+          "type": "integer"
+        },
+        "not_comparable": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Not Comparable",
+          "type": "integer"
+        }
+      },
+      "title": "DiffSummary",
       "type": "object"
     },
     "DwellRow": {
@@ -1323,6 +1540,40 @@
       "title": "EntropyFinding",
       "type": "object"
     },
+    "FailureDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "dispatch_failed": {
+          "default": false,
+          "title": "Dispatch Failed",
+          "type": "boolean"
+        },
+        "output_preview": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextPreview"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "default": "unknown",
+          "title": "Status",
+          "type": "string"
+        },
+        "task": {
+          "$ref": "#/$defs/TaskRef"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "title": "FailureDetail",
+      "type": "object"
+    },
     "FrictionCandidate": {
       "additionalProperties": false,
       "properties": {
@@ -1339,6 +1590,27 @@
         },
         "confidence": {
           "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "confidence_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Confidence Reasons",
+          "type": "array"
+        },
+        "drivers": {
+          "items": {
+            "$ref": "#/$defs/FrictionDriver"
+          },
+          "title": "Drivers",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
         },
         "recommended_action": {
           "title": "Recommended Action",
@@ -1368,6 +1640,35 @@
         "recommended_action"
       ],
       "title": "FrictionCandidate",
+      "type": "object"
+    },
+    "FrictionDriver": {
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "title": "Component",
+          "type": "string"
+        },
+        "impact": {
+          "title": "Impact",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "component",
+        "value",
+        "impact",
+        "label"
+      ],
+      "title": "FrictionDriver",
       "type": "object"
     },
     "FrictionScoreSection": {
@@ -1666,6 +1967,13 @@
           "title": "Repeated Token Count",
           "type": "integer"
         },
+        "repeated_tokens": {
+          "items": {
+            "$ref": "#/$defs/RepeatedEntropyToken"
+          },
+          "title": "Repeated Tokens",
+          "type": "array"
+        },
         "sources": {
           "items": {
             "$ref": "#/$defs/SourceKind"
@@ -1738,6 +2046,58 @@
         "link"
       ],
       "title": "PreviousRunReference",
+      "type": "object"
+    },
+    "RepeatedEntropyToken": {
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "entropy_mean": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entropy Mean"
+        },
+        "occurrences": {
+          "minimum": 0,
+          "title": "Occurrences",
+          "type": "integer"
+        },
+        "task_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Task Ids",
+          "type": "array"
+        },
+        "token_prefix": {
+          "title": "Token Prefix",
+          "type": "string"
+        }
+      },
+      "required": [
+        "token_prefix",
+        "occurrences",
+        "detail"
+      ],
+      "title": "RepeatedEntropyToken",
       "type": "object"
     },
     "ReportWarning": {
@@ -1866,6 +2226,25 @@
           "default": null,
           "title": "Duration Seconds"
         },
+        "final_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Final Status"
+        },
+        "intervening_tasks": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Intervening Tasks",
+          "type": "array"
+        },
         "succeeded": {
           "title": "Succeeded",
           "type": "boolean"
@@ -1876,6 +2255,13 @@
           },
           "title": "Tasks",
           "type": "array"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/RetryTransition"
+          },
+          "title": "Transitions",
+          "type": "array"
         }
       },
       "required": [
@@ -1884,6 +2270,46 @@
         "succeeded"
       ],
       "title": "RetrySequence",
+      "type": "object"
+    },
+    "RetryTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "changes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Changes",
+          "type": "array"
+        },
+        "from_attempt": {
+          "minimum": 1,
+          "title": "From Attempt",
+          "type": "integer"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "to_attempt": {
+          "minimum": 2,
+          "title": "To Attempt",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "from_attempt",
+        "to_attempt"
+      ],
+      "title": "RetryTransition",
       "type": "object"
     },
     "RunDiffSection": {
@@ -1921,6 +2347,20 @@
           "title": "Kind",
           "type": "string"
         },
+        "new_entities": {
+          "items": {
+            "$ref": "#/$defs/DiffEntityPresence"
+          },
+          "title": "New Entities",
+          "type": "array"
+        },
+        "removed_entities": {
+          "items": {
+            "$ref": "#/$defs/DiffEntityPresence"
+          },
+          "title": "Removed Entities",
+          "type": "array"
+        },
         "sources": {
           "items": {
             "$ref": "#/$defs/SourceKind"
@@ -1942,6 +2382,17 @@
           ],
           "default": null,
           "title": "Status Reason"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiffSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "title": {
           "minLength": 1,
@@ -2359,6 +2810,17 @@
     "TaskRef": {
       "additionalProperties": false,
       "properties": {
+        "argument_preview": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextPreview"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "arguments": {
           "anyOf": [
             {
@@ -2441,6 +2903,51 @@
       "title": "TaskRef",
       "type": "object"
     },
+    "TextPreview": {
+      "additionalProperties": false,
+      "description": "Retention-aware display text prepared by the report builder.",
+      "properties": {
+        "binary": {
+          "default": false,
+          "title": "Binary",
+          "type": "boolean"
+        },
+        "decoded": {
+          "default": false,
+          "title": "Decoded",
+          "type": "boolean"
+        },
+        "original_length": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Original Length",
+          "type": "integer"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionRule",
+          "default": "unknown"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "title": "TextPreview",
+      "type": "object"
+    },
     "TimelineBucket": {
       "additionalProperties": false,
       "properties": {
@@ -2487,6 +2994,13 @@
           ],
           "default": null,
           "title": "Description"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/TaskRef"
+          },
+          "title": "Entries",
+          "type": "array"
         },
         "id": {
           "minLength": 1,
@@ -2733,7 +3247,7 @@
       "type": "array"
     },
     "report_model_version": {
-      "default": "1.0.0",
+      "default": "1.1.0",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "title": "Report Model Version",
       "type": "string"

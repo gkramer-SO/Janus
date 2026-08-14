@@ -8,8 +8,8 @@ CLI entry point for Mythic pull-mode and other source parsers.
 import argparse
 import json
 import os
-import re
 import sys
+import time
 import zlib
 import traceback
 from datetime import datetime, timezone
@@ -71,7 +71,8 @@ from Core.analyzer_behavior_registry import build_analyzer_context
 from Core.data_quality import aggregate_data_quality, build_data_quality
 from Core.diff_compare import DiffThresholds, build_diff, high_confidence_regression_count
 from Core.diff_render_text import render_text as render_diff_text
-from Core.html_output import generate_html
+from Core.report_builder import build_report_model, write_report_model_atomically
+from Core.static_report import package_static_report
 from Core.io import (
     EventValidationError,
     create_latest_symlink,
@@ -444,45 +445,6 @@ def _print_analyzer_summary(analyzer_name: str, result: dict) -> None:
                 continue
             dump_path = group.get("dump_path") or "<not written>"
             print(f"  {group['name']}: {group['match_count']} match(es) -> {dump_path}")
-
-
-def find_previous_versions(
-    base_dir: Path, operation_slug: str, current_version: str
-) -> list[dict]:
-    """
-    Scan for other {slug}_* directories, return sorted list (newest first).
-
-    ``operation_slug`` is the filesystem-safe slug stored in ``bundle.json``
-    (falls back to ``op-{id}`` for legacy directories).
-
-    Returns list of dicts with keys: version, dir_name, report_path
-    """
-    if not base_dir.exists():
-        return []
-
-    pattern = re.compile(
-        rf"^{re.escape(operation_slug)}_(\d{{8}}_\d{{6}})(?:_[a-f0-9]{{8}})?$"
-    )
-    versions = []
-
-    for item in base_dir.iterdir():
-        if not item.is_dir():
-            continue
-        match = pattern.match(item.name)
-        if match:
-            version = match.group(1)
-            if version != current_version:
-                report_path = item / "report.html"
-                if report_path.exists():
-                    versions.append({
-                        "version": version,
-                        "dir_name": item.name,
-                        "report_path": report_path,
-                    })
-
-    # Sort by version string (YYYYMMDD_HHMMSS format is naturally sortable)
-    versions.sort(key=lambda v: v["version"], reverse=True)
-    return versions
 
 
 def run_mythic(
@@ -1671,86 +1633,247 @@ def run_html(
     output_path: Path,
     include_version_links: bool = True,
 ) -> int:
-    """Generate HTML report from analysis JSON files."""
-    analysis_files = {
-        analyzer_name: analysis_dir / output_name
-        for analyzer_name, output_name in ANALYZER_OUTPUTS.items()
-    }
-    diff_path = analysis_dir / "diff.json"
-    diff_data = None
-
-    # Check if at least one analysis file exists
-    existing_files = [path for path in analysis_files.values() if path.exists()]
-    if not existing_files and not diff_path.exists():
-        print(f"error: no analysis files found in {analysis_dir}", file=sys.stderr)
-        print("Run 'janus analyze' first to generate analysis data.", file=sys.stderr)
+    """Generate report-model.json and a self-contained dashboard report."""
+    build_result = build_report_model(
+        analysis_dir,
+        include_previous_runs=include_version_links,
+    )
+    if build_result.model is None:
+        error = build_result.errors[0] if build_result.errors else None
+        message = error.message if error else "Report model construction failed."
+        print(f"error: {message}", file=sys.stderr)
         return 1
-    if not existing_files and diff_path.exists():
-        try:
-            with diff_path.open(encoding="utf-8") as f:
-                diff_data = json.load(f)
-            if not isinstance(diff_data, dict):
-                print(f"error: diff data in {diff_path} must be a JSON object", file=sys.stderr)
-                return 1
-        except Exception as e:
-            print(f"error: could not load diff data from {diff_path}: {e}", file=sys.stderr)
-            return 1
-
-    # Load bundle.json for version metadata
-    bundle_path = analysis_dir / "bundle.json"
-    version_metadata = None
-    previous_versions = []
-
-    if bundle_path.exists():
-        try:
-            with bundle_path.open(encoding="utf-8") as f:
-                version_metadata = json.load(f)
-            if version_metadata.get("janus_version") in (None, "", "unknown"):
-                version_metadata["janus_version"] = get_janus_version()
-
-            # Find previous versions if versioning is enabled
-            if include_version_links and "analysis_version" in version_metadata:
-                op_slug = version_metadata.get("operation_slug")
-                if not op_slug and "operation_id" in version_metadata:
-                    op_slug = f"op-{version_metadata['operation_id']}"
-                if op_slug:
-                    current_version = version_metadata["analysis_version"]
-                    base_dir = analysis_dir.parent
-                    previous_versions = find_previous_versions(base_dir, op_slug, current_version)
-        except Exception as e:
-            print(f"warning: could not load bundle metadata: {e}", file=sys.stderr)
-    if version_metadata is None:
-        version_metadata = {"janus_version": get_janus_version()}
-
     try:
-        generate_html(
-            analysis_files,
-            output_path,
-            version_metadata=version_metadata,
-            previous_versions=previous_versions,
-            diff_data=diff_data,
-        )
+        model_path = analysis_dir / "report-model.json"
+        write_report_model_atomically(build_result.model, model_path)
+        package_static_report(build_result.model, output_path)
+        print(f"Report model generated: {model_path}")
         print(f"HTML report generated: {output_path}")
         print(f"Open report: {_format_file_uri(output_path)}")
-
-        # Report which sections were included
-        if diff_data is not None:
-            print("  - diff")
-        else:
-            for name, path in analysis_files.items():
-                if path.exists():
-                    print(f"  - {name}")
-                else:
-                    print(f"  ! {name} (missing)")
-
-        if previous_versions:
-            print(f"  - {len(previous_versions)} previous version(s) linked")
-
         return 0
-    except Exception as e:
-        print(f"error: failed to generate HTML report: {e}", file=sys.stderr)
+    except Exception as exc:
+        print(f"error: failed to generate HTML report: {exc}", file=sys.stderr)
         return 1
 
+
+def _live_run_id(source: str, run_dir: Path) -> str:
+    """Create a stable report-model id for a continuously refreshed run."""
+    return f"live:{source}:{slugify(run_dir.name)}"
+
+
+def _make_live_worker(
+    *,
+    output_dir: Path,
+    source: str,
+    config: dict,
+    operation_id: int | None,
+    oplog_id: int | None,
+    endpoint: str | None,
+    api_token: str | None,
+    username: str | None,
+    password: str | None,
+    duration_ms: int | None,
+    operation_name: str | None,
+    log_path: Path | None,
+    insecure: bool,
+    output_rule: str | None,
+    arguments_rule: str | None,
+    response_page_size: int | None,
+    debug: bool,
+    poll_interval: float,
+    analysis_debounce: float,
+):
+    """Build a live worker by delegating each poll to the current ingestors."""
+    from Server.live import LiveRunWorker
+    from Server.source_pollers import ArtifactSnapshotPoller
+
+    run_id = _live_run_id(source, output_dir)
+
+    def ingest(staging_dir: Path) -> int:
+        if source == "mythic":
+            target_id = operation_id or config.get("mythic", {}).get("operation_id")
+            if not target_id:
+                print("error: Mythic live mode requires --operation-id or mythic.operation_id in config.", file=sys.stderr)
+                return 1
+            return run_mythic(
+                operation_id=target_id,
+                endpoint=endpoint,
+                api_token=api_token,
+                verify_tls=not insecure,
+                out_dir=staging_dir,
+                config=config,
+                debug=debug,
+                no_versioning=True,
+                output_rule_cli=output_rule,
+                arguments_rule_cli=arguments_rule,
+                responses_page_size_cli=response_page_size,
+            )
+        if source == "ghostwriter":
+            target_id = oplog_id or operation_id or config.get("ghostwriter", {}).get("oplog_id")
+            if not target_id:
+                print("error: Ghostwriter live mode requires --oplog-id or ghostwriter.oplog_id in config.", file=sys.stderr)
+                return 1
+            return run_ghostwriter(
+                oplog_id=target_id,
+                endpoint=endpoint,
+                api_token=api_token,
+                verify_tls=not insecure,
+                out_dir=staging_dir,
+                config=config,
+                debug=debug,
+                no_versioning=True,
+                output_rule_cli=output_rule,
+                arguments_rule_cli=arguments_rule,
+            )
+        if source == "cobaltstrike":
+            return run_cobaltstrike_rest_load(
+                endpoint=endpoint,
+                username=username,
+                password=password,
+                api_token=api_token,
+                duration_ms=duration_ms,
+                operation_id=operation_id,
+                operation_name=operation_name,
+                out_dir=staging_dir,
+                verify_tls=not insecure,
+                debug=debug,
+                no_versioning=True,
+                run_analyzers=False,
+                config=config,
+                output_rule_cli=output_rule,
+                arguments_rule_cli=arguments_rule,
+            )
+        if source == "outflank":
+            return run_outflank_load(
+                log_path=log_path,
+                operation_id=operation_id,
+                operation_name=operation_name,
+                out_dir=staging_dir,
+                no_versioning=True,
+                run_analyzers=False,
+                config=config,
+                output_rule_cli=output_rule,
+                arguments_rule_cli=arguments_rule,
+            )
+        raise ValueError(f"Unsupported live source: {source}")
+
+    def analyze_live_run(run_dir: Path) -> int:
+        result = run_analyze_all(run_dir / "events.ndjson", run_dir)
+        if result != 0:
+            return result
+        return run_html(run_dir, run_dir / "report.html", include_version_links=False)
+
+    def revision() -> int | None:
+        try:
+            return int(json.loads((output_dir / "report-model.json").read_text(encoding="utf-8"))["revision"])
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+
+    return LiveRunWorker(
+        run_dir=output_dir,
+        run_id=run_id,
+        source=source,
+        poller=ArtifactSnapshotPoller(
+            staging_dir=output_dir / ".live-source",
+            run_id=run_id,
+            ingest=ingest,
+        ),
+        analyzer=analyze_live_run,
+        revision_loader=revision,
+        poll_interval_seconds=poll_interval,
+        analysis_debounce_seconds=analysis_debounce,
+    )
+
+
+def run_serve(
+    *,
+    output_root: Path,
+    run_dir: Path | None,
+    host: str,
+    port: int,
+    debug: bool,
+    live: bool = False,
+    source: str | None = None,
+    config_path: Path = DEFAULT_CONFIG_PATH,
+    operation_id: int | None = None,
+    oplog_id: int | None = None,
+    endpoint: str | None = None,
+    api_token: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    duration_ms: int | None = None,
+    operation_name: str | None = None,
+    log_path: Path | None = None,
+    insecure: bool = False,
+    output_rule: str | None = None,
+    arguments_rule: str | None = None,
+    response_page_size: int | None = None,
+    poll_interval: float = 30.0,
+    analysis_debounce: float = 2.0,
+) -> int:
+    """Run the local read-only dashboard until interrupted."""
+    try:
+        from Server.app import run_server
+
+        workers = {}
+        if live:
+            config = load_config(config_path)
+            resolved_source = _resolve_cli_source(config, source)
+            if run_dir is None:
+                run_dir = output_root / "live" / resolved_source
+            run_dir.mkdir(parents=True, exist_ok=True)
+            worker = _make_live_worker(
+                output_dir=run_dir,
+                source=resolved_source,
+                config=config,
+                operation_id=operation_id,
+                oplog_id=oplog_id,
+                endpoint=endpoint,
+                api_token=api_token,
+                username=username,
+                password=password,
+                duration_ms=duration_ms,
+                operation_name=operation_name,
+                log_path=log_path,
+                insecure=insecure,
+                output_rule=output_rule,
+                arguments_rule=arguments_rule,
+                response_page_size=response_page_size,
+                debug=debug,
+                poll_interval=poll_interval,
+                analysis_debounce=analysis_debounce,
+            )
+            worker.start()
+            deadline = time.monotonic() + max(30.0, poll_interval * 2)
+            while time.monotonic() < deadline:
+                state = worker.snapshot()
+                if state["phase"] == "ready" and state["last_successful_analysis_at"]:
+                    break
+                if state["phase"] in {"degraded", "error"} and state["consecutive_failures"]:
+                    worker.stop()
+                    print(f"error: initial live ingest failed: {state['error']}", file=sys.stderr)
+                    return 1
+                time.sleep(0.1)
+            else:
+                worker.stop()
+                print("error: initial live ingest did not complete before timeout.", file=sys.stderr)
+                return 1
+            workers[worker.state.run_id] = worker
+
+        run_server(
+            output_root=output_root,
+            selected_run=run_dir,
+            host=host,
+            port=port,
+            debug=debug,
+            live_workers=workers,
+        )
+        return 0
+    except KeyboardInterrupt:
+        return 0
+    except Exception as exc:
+        print(f"error: dashboard server failed: {exc}", file=sys.stderr)
+        return 1
 
 def run_diff(
     baseline_dir: Path,
@@ -1776,6 +1899,25 @@ def run_diff(
     diff_path = out_dir / "diff.json"
     with diff_path.open("w", encoding="utf-8") as f:
         json.dump(diff, f, indent=2, sort_keys=True, ensure_ascii=False)
+
+    baseline = diff.get("baseline", {})
+    candidate = diff.get("candidate", {})
+    write_bundle(
+        {
+            "run_kind": "diff",
+            "source": "mixed",
+            "source_subtype": "run-comparison",
+            "operation_name": f"{baseline.get('run_id', 'baseline')} vs {candidate.get('run_id', 'candidate')}",
+            "operation_slug": f"{baseline.get('run_id', 'baseline')}-vs-{candidate.get('run_id', 'candidate')}",
+            "task_count": int(baseline.get("total_tasks", 0) or 0) + int(candidate.get("total_tasks", 0) or 0),
+            "result_count": 0,
+            "status_counts": {},
+            "arguments_rule": "unknown",
+            "output_rule": "unknown",
+        },
+        out_dir / "bundle.json",
+        datetime.now(timezone.utc),
+    )
 
     html_path = out_dir / "report.html"
     if write_html_report:
@@ -1994,6 +2136,41 @@ def _cli() -> int:
         help="Include links to previous analysis versions (default: true)",
     )
 
+    # -- serve subcommand ----------------------------------------------------
+    serve_parser = subparsers.add_parser("serve", help="Serve the local read-only Janus dashboard")
+    serve_parser.add_argument(
+        "--output-root",
+        type=Path,
+        default=Path("/data/out"),
+        help="Root containing Janus runs (default: /data/out)",
+    )
+    serve_parser.add_argument(
+        "--run-dir",
+        type=Path,
+        default=None,
+        help="Limit the dashboard to one run directory below the output root",
+    )
+    serve_parser.add_argument("--host", default="0.0.0.0", help="Container listen interface")
+    serve_parser.add_argument("--port", type=int, default=8000, help="Container listen port")
+    serve_parser.add_argument("--debug", action="store_true", help="Enable verbose server logging")
+    serve_parser.add_argument("--live", action="store_true", help="Continuously refresh one source-backed live run")
+    serve_parser.add_argument("--source", choices=["mythic", "ghostwriter", "cobaltstrike", "outflank"], default=None, help="Live source (default: configured source)")
+    serve_parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="Janus configuration used for live ingest")
+    serve_parser.add_argument("--operation-id", type=int, default=None, help="Live Mythic/Cobalt Strike/Outflank operation ID")
+    serve_parser.add_argument("--oplog-id", type=int, default=None, help="Live Ghostwriter oplog ID")
+    serve_parser.add_argument("--endpoint", default=None, help="Override the live source endpoint")
+    serve_parser.add_argument("--api-token", default=None, help="Override the live source API token")
+    serve_parser.add_argument("--username", default=None, help="Override Cobalt Strike username")
+    serve_parser.add_argument("--password", default=None, help="Override Cobalt Strike password")
+    serve_parser.add_argument("--duration-ms", type=int, default=None, help="Cobalt Strike token lifetime")
+    serve_parser.add_argument("--operation-name", default=None, help="Cobalt Strike or Outflank operation name")
+    serve_parser.add_argument("--log-path", type=Path, default=None, help="Outflank log file or directory")
+    serve_parser.add_argument("--insecure", action="store_true", help="Disable TLS verification for live source access")
+    serve_parser.add_argument("--output-rule", choices=["all", "errors_only", "none"], default=None, help="Live output retention override")
+    serve_parser.add_argument("--arguments-rule", choices=["all", "drop", "hash", "features_only"], default=None, help="Live argument retention override")
+    serve_parser.add_argument("--response-page-size", type=int, default=None, help="Mythic response page size")
+    serve_parser.add_argument("--poll-interval", type=float, default=30.0, help="Seconds between live source polls")
+    serve_parser.add_argument("--analysis-debounce", type=float, default=2.0, help="Seconds to coalesce changes before analysis")
     # -- diff subcommand ------------------------------------------------------
     diff_parser = subparsers.add_parser("diff", help="Compare two completed Janus output directories")
     diff_parser.add_argument(
@@ -2490,6 +2667,38 @@ def _cli() -> int:
             analysis_dir=args.analysis_dir,
             output_path=args.output,
             include_version_links=args.include_version_links,
+        )
+    elif args.command == "serve":
+        if not 1 <= args.port <= 65535:
+            print("error: --port must be between 1 and 65535", file=sys.stderr)
+            return 1
+        if args.poll_interval <= 0 or args.analysis_debounce < 0:
+            print("error: --poll-interval must be > 0 and --analysis-debounce must be >= 0", file=sys.stderr)
+            return 1
+        return run_serve(
+            output_root=args.output_root,
+            run_dir=args.run_dir,
+            host=args.host,
+            port=args.port,
+            debug=args.debug,
+            live=args.live,
+            source=args.source,
+            config_path=args.config,
+            operation_id=args.operation_id,
+            oplog_id=args.oplog_id,
+            endpoint=args.endpoint,
+            api_token=args.api_token,
+            username=args.username,
+            password=args.password,
+            duration_ms=args.duration_ms,
+            operation_name=args.operation_name,
+            log_path=args.log_path,
+            insecure=args.insecure,
+            output_rule=args.output_rule,
+            arguments_rule=args.arguments_rule,
+            response_page_size=args.response_page_size,
+            poll_interval=args.poll_interval,
+            analysis_debounce=args.analysis_debounce,
         )
     elif args.command == "diff":
         if args.min_sample_size < 1:
