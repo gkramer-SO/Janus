@@ -50,6 +50,8 @@ cp Config/janus.example.yml Config/janus.yml # set source, redaction settings, e
 ./janus-cli serve --port 8080
 ```
 
+When multiple runs are available, use the dashboard's run selector to move between them without restarting the server. Press `/` to focus report search; Enter and Shift+Enter move forward and backward through matching rows. The dashboard rejects incompatible report-model major versions with an explicit upgrade message.
+
 The host-side wrapper publishes only to loopback and rejects remote `--bind` values. The app listens inside the container only so Docker can forward that local port. This does not change the ordinary workflow: `pull`, `analyze`, `report`, and `run` each launch a one-shot container and exit when finished. Source endpoints in `Config/janus.yml` must remain reachable from the container; on Docker Desktop, use `host.docker.internal` for an API running on the host.
 
 Live mode starts one continuously refreshed run and remains local-only. It reuses the configured Mythic, Ghostwriter, Cobalt Strike REST, or Outflank ingest path in bounded full-snapshot polls, applies the same retention policy, then reruns the existing analyzers after the configured debounce period. The first snapshot is completed before the dashboard opens; later source or analysis failures leave the previous report available and surface a degraded status.
@@ -61,6 +63,8 @@ Live mode starts one continuously refreshed run and remains local-only. It reuse
 ```
 
 `janus-cli report` continues to produce a portable, self-contained `report.html` plus `report-model.json`; it does not require a dashboard server or internet connection to open.
+
+For contributor validation, `make check` runs schema drift detection, the full Python suite, dashboard tests and production build, and Go CLI tests. `make docker-smoke` additionally builds the production image and exercises static report generation plus the served health, run-listing, and dashboard routes.
 ## Demo 
 
 <p align="center">

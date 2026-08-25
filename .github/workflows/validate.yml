@@ -10,17 +10,51 @@ permissions:
   contents: read
 
 jobs:
-  report-model:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
       - name: Install Janus and test dependencies
         run: python -m pip install -e ".[test]"
+      - name: Install dashboard dependencies
+        run: npm --prefix dashboard ci --no-audit --no-fund
       - name: Check generated report-model artifacts
         run: make schema-check
-      - name: Run report-model tests
-        run: pytest -q Tests/test_report_model.py Tests/test_report_fixtures.py
+      - name: Run Python tests
+        run: pytest -q Tests/
+      - name: Test and build dashboard
+        run: |
+          npm --prefix dashboard run typecheck
+          npm --prefix dashboard run test
+          npm --prefix dashboard run build
+      - name: Test and build Go CLI
+        run: |
+          go test ./...
+          make cli
+      - name: Reject whitespace errors
+        run: git diff --check "$(git merge-base origin/main HEAD)" HEAD
+
+  docker-smoke:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t janus:ci .
+      - name: Exercise static, served, and local live-source dashboard paths
+        run: scripts/docker_smoke_test.sh janus:ci

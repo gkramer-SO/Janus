@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
+import janus
 from Server.live import LiveEventBroker, LiveRunPhase, LiveRunWorker, PollResult
 from Server.source_pollers import ArtifactSnapshotPoller
 
@@ -116,3 +118,69 @@ def test_artifact_snapshot_poller_promotes_only_complete_existing_ingest_artifac
     assert result.bundle["run_id"] == "live:fixture"
     assert result.checkpoint is not None
     assert result.checkpoint["event_count"] == 1
+
+
+def test_snapshot_replaces_changed_content_with_stable_event_identity(tmp_path: Path) -> None:
+    snapshots = [
+        [{"event_type": "result", "result_id": 1, "task_id": 1, "status": "unknown"}],
+        [{"event_type": "result", "result_id": 1, "task_id": 1, "status": "success"}],
+    ]
+    analyses = 0
+
+    def poller(_checkpoint):
+        index = min(analyses, len(snapshots) - 1)
+        return PollResult(events=snapshots[index], snapshot=True)
+
+    def analyze(_run_dir: Path) -> int:
+        nonlocal analyses
+        analyses += 1
+        return 0
+
+    worker = LiveRunWorker(
+        run_dir=tmp_path,
+        run_id="run-1",
+        source="mythic",
+        poller=poller,
+        analyzer=analyze,
+        poll_interval_seconds=0.02,
+        analysis_debounce_seconds=0,
+    )
+    worker.start()
+    _wait_until(lambda: analyses >= 2)
+    worker.stop()
+
+    event = json.loads((tmp_path / "events.ndjson").read_text(encoding="utf-8"))
+    assert event["status"] == "success"
+
+
+def test_serve_stops_prestarted_live_worker_when_server_start_fails(tmp_path: Path, monkeypatch) -> None:
+    class Worker:
+        state = SimpleNamespace(run_id="live:outflank:test")
+        stopped = 0
+
+        def start(self) -> None:
+            pass
+
+        def stop(self) -> None:
+            self.stopped += 1
+
+        def snapshot(self) -> dict:
+            return {"phase": "ready", "last_successful_analysis_at": "2026-08-24T12:00:00Z"}
+
+    worker = Worker()
+    monkeypatch.setattr(janus, "load_config", lambda _path: {})
+    monkeypatch.setattr(janus, "_make_live_worker", lambda **_kwargs: worker)
+    monkeypatch.setattr("Server.app.run_server", lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("bind failed")))
+
+    result = janus.run_serve(
+        output_root=tmp_path,
+        run_dir=None,
+        host="0.0.0.0",
+        port=8000,
+        debug=False,
+        live=True,
+        source="outflank",
+    )
+
+    assert result == 1
+    assert worker.stopped == 1

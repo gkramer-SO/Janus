@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-24
+
+### Added
+
+- **Versioned report model**: Added the validated `report-model.json` contract, generated JSON Schema and TypeScript declarations, source-aware data-quality metadata, safe links, explicit missing/suppressed/error sections, and fixture-driven field parity coverage for every analyzer adapter.
+- **Local dashboard**: Added the Preact dashboard and local-only FastAPI service with safe run discovery, run selection, static report reuse, sortable and searchable analyzer views, keyboard match navigation, accessible native expansion, and report-model compatibility errors.
+- **Live observation mode**: Added bounded source snapshot polling, atomic promotion, debounced reanalysis, persisted checkpoints, last-known-good reports, health/status APIs, and SSE revision updates for Mythic, Ghostwriter, Cobalt Strike REST, and Outflank sources.
+- **Release validation**: Added complete Python, frontend, and Go CI gates plus production-image smoke coverage for static report generation and served dashboard APIs.
+
+### Changed
+
+- **Report generation**: Static HTML reports now embed the same validated model and compiled dashboard used by served mode.
+- **Server lifecycle**: Live workers use FastAPI lifespan management for deterministic startup and shutdown.
+
+### Fixed
+
+- Ordinary non-live served reports no longer open a live event stream or display a false degraded connection state.
+- Live refreshes remain pinned to the selected run, and table sorting uses raw numeric values rather than formatted duration or percentage text.
+
 ## [1.2.0] - 2026-06-23
 
 ### Added

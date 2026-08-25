@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -12,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
 from Core.io import get_janus_version
-from Core.report_model import ReportModel
+from Core.report_model import Capability, ReportModel
 from Server.live import LiveRunWorker
 from Server.service import RunArtifactError, RunNotFoundError, RunService
 
@@ -37,20 +38,28 @@ def create_app(
 ) -> FastAPI:
     service = RunService(output_root, selected_run)
     assets = asset_dir.resolve()
-    app = FastAPI(title="Janus Local Dashboard", version=get_janus_version(), docs_url=None, redoc_url=None)
+    workers = live_workers or {}
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        for worker in workers.values():
+            worker.start()
+        try:
+            yield
+        finally:
+            for worker in workers.values():
+                worker.stop()
+
+    app = FastAPI(
+        title="Janus Local Dashboard",
+        version=get_janus_version(),
+        docs_url=None,
+        redoc_url=None,
+        lifespan=lifespan,
+    )
     app.state.run_service = service
     app.state.asset_dir = assets
-    app.state.live_workers = live_workers or {}
-
-    @app.on_event("startup")
-    def start_live_workers() -> None:
-        for worker in app.state.live_workers.values():
-            worker.start()
-
-    @app.on_event("shutdown")
-    def stop_live_workers() -> None:
-        for worker in app.state.live_workers.values():
-            worker.stop()
+    app.state.live_workers = workers
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -96,19 +105,28 @@ def create_app(
 
     @app.get("/api/v1/runs")
     def runs() -> dict[str, Any]:
-        return {"runs": [record.summary() for record in service.records()]}
+        return {
+            "runs": [
+                {**record.summary(), "live": record.run_id in app.state.live_workers}
+                for record in service.records()
+            ]
+        }
 
     @app.get("/api/v1/runs/{run_id}")
     def run_metadata(run_id: str) -> dict[str, Any]:
-        return service.get(run_id).summary()
+        record = service.get(run_id)
+        return {**record.summary(), "live": run_id in app.state.live_workers}
 
     @app.get("/api/v1/runs/{run_id}/report", response_model=ReportModel)
     def report(run_id: str, request: Request) -> Response:
         record = service.get(run_id)
-        etag = service.etag(record.model)
+        model = record.model
+        if run_id in app.state.live_workers and Capability.LIVE_REVISIONS not in model.capabilities:
+            model = model.model_copy(update={"capabilities": [*model.capabilities, Capability.LIVE_REVISIONS]})
+        etag = service.etag(model)
         if request.headers.get("if-none-match") == etag:
             return Response(status_code=304, headers={"ETag": etag})
-        payload = record.model.model_dump(mode="json", exclude_none=True)
+        payload = model.model_dump(mode="json", exclude_none=True)
         return JSONResponse(payload, headers={"ETag": etag, "Cache-Control": "no-cache"})
 
     @app.get("/api/v1/runs/{run_id}/status")
@@ -116,8 +134,8 @@ def create_app(
         record = service.get(run_id)
         worker = app.state.live_workers.get(run_id)
         if worker is not None:
-            return worker.snapshot()
-        return {"run_id": run_id, "phase": "complete", "revision": record.model.revision, "stale": False}
+            return {**worker.snapshot(), "live": True}
+        return {"run_id": run_id, "phase": "complete", "revision": record.model.revision, "stale": False, "live": False}
 
     @app.get("/api/v1/runs/{run_id}/stream")
     def run_stream(run_id: str, request: Request) -> StreamingResponse:

@@ -34,6 +34,9 @@ def test_read_only_api_lists_serves_and_caches_runs(tmp_path) -> None:
 
     listing = client.get("/api/v1/runs")
     assert listing.json()["runs"][0]["run_id"] == run_id
+    assert listing.json()["runs"][0]["live"] is False
+    assert client.get(f"/api/v1/runs/{run_id}/status").json()["live"] is False
+    assert client.get(f"/api/v1/runs/{run_id}/stream").status_code == 404
 
     report = client.get(f"/api/v1/runs/{run_id}/report")
     assert report.status_code == 200
@@ -67,3 +70,30 @@ def test_api_returns_safe_structured_errors(tmp_path) -> None:
     assert response.json()["error"]["code"] == "run-not-found"
     assert response.json()["error"]["request_id"]
     assert "traceback" not in response.text.lower()
+
+
+def test_live_run_metadata_and_lifespan_are_explicit(tmp_path) -> None:
+    output_root, run_id = _output_root(tmp_path)
+
+    class Worker:
+        started = 0
+        stopped = 0
+
+        def start(self) -> None:
+            self.started += 1
+
+        def stop(self) -> None:
+            self.stopped += 1
+
+        def snapshot(self) -> dict:
+            return {"run_id": run_id, "phase": "ready", "revision": 1, "stale": False}
+
+    worker = Worker()
+    app = create_app(output_root=output_root, asset_dir=ROOT / "dashboard" / "dist", live_workers={run_id: worker})
+    with TestClient(app) as client:
+        assert client.get("/api/v1/runs").json()["runs"][0]["live"] is True
+        assert client.get(f"/api/v1/runs/{run_id}/status").json()["live"] is True
+        assert "live-revisions" in client.get(f"/api/v1/runs/{run_id}/report").json()["capabilities"]
+        assert worker.started == 1
+
+    assert worker.stopped == 1

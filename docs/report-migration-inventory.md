@@ -83,9 +83,9 @@ at the model-construction boundary and is independently enforced by the UI.
 - [x] Existing search, sorting, row expansion, safe links, previous runs, and
   diff behavior appear in the capabilities contract.
 - [x] Unknown future section kinds have an explicit fallback envelope.
-- [ ] Phase 3 must prove field-level adapter parity against the fixtures before
+- [x] Phase 3 proves field-level adapter parity against analyzer-shaped fixtures before
   replacing `Core/html_output.py`.
-- [ ] The dashboard must preserve keyboard search navigation and accessible
+- [x] The dashboard preserves keyboard search navigation and accessible
   native expansion behavior.
 
 ## Representative fixture matrix
@@ -107,4 +107,3 @@ accidental public contract.
 | `retention-enabled.json` | No raw values, explicit retention limitations |
 | `missing-analyzers.json` | Missing section statuses and reasons |
 | `malformed-optional-fields.json` | Valid absence of optional source fields; paired negative validation tests |
-

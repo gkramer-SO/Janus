@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
-from Core.report_builder import _preview, build_report_model, write_report_model_atomically
+from Core.report_builder import _map_section, _preview, build_report_model, write_report_model_atomically
+
+
+ROOT = Path(__file__).resolve().parents[1]
+ADAPTER_CASES = json.loads((ROOT / "Tests" / "fixtures" / "report-adapters.json").read_text(encoding="utf-8"))
 
 
 def _write_json(path, value) -> None:
@@ -148,3 +153,22 @@ def test_output_preview_keeps_malformed_text_and_excludes_binary() -> None:
     assert malformed["decoded"] is False
     assert binary is not None and binary["binary"] is True
     assert binary["text"] is None
+
+
+def _field(document, dotted_path: str):
+    value = document
+    for part in dotted_path.split("."):
+        value = value[int(part)] if isinstance(value, list) else value[part]
+    return value
+
+
+@pytest.mark.parametrize("kind", sorted(ADAPTER_CASES))
+def test_analyzer_adapter_field_parity(kind: str) -> None:
+    case = ADAPTER_CASES[kind]
+
+    section = _map_section(kind, case["payload"], "mythic", "https://mythic.example")
+
+    assert section["kind"] == kind
+    assert section["status"] == "available"
+    for path, expected in case["expected"].items():
+        assert _field(section, path) == expected, f"{kind}: {path}"

@@ -1812,10 +1812,10 @@ def run_serve(
     analysis_debounce: float = 2.0,
 ) -> int:
     """Run the local read-only dashboard until interrupted."""
+    workers = {}
     try:
         from Server.app import run_server
 
-        workers = {}
         if live:
             config = load_config(config_path)
             resolved_source = _resolve_cli_source(config, source)
@@ -1870,8 +1870,12 @@ def run_serve(
         )
         return 0
     except KeyboardInterrupt:
+        for worker in workers.values():
+            worker.stop()
         return 0
     except Exception as exc:
+        for worker in workers.values():
+            worker.stop()
         print(f"error: dashboard server failed: {exc}", file=sys.stderr)
         return 1
 

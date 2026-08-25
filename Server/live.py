@@ -302,9 +302,28 @@ class LiveRunWorker:
         change is still based on canonical event identities so it can drive the
         usual analysis debounce.
         """
-        incoming_keys = {self.event_key(event, self.state.run_id) for event in events}
-        previous_keys = set(self._dedup_keys)
-        changed_count = len(incoming_keys.symmetric_difference(previous_keys))
+        def keyed(documents: list[dict[str, Any]]) -> dict[str, str]:
+            return {
+                self.event_key(event, self.state.run_id): json.dumps(
+                    event, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+                )
+                for event in documents
+            }
+
+        existing: list[dict[str, Any]] = []
+        if self.events_path.is_file():
+            try:
+                existing = [
+                    event
+                    for line in self.events_path.read_text(encoding="utf-8").splitlines()
+                    if line.strip() and isinstance((event := json.loads(line)), dict)
+                ]
+            except (OSError, ValueError, json.JSONDecodeError):
+                existing = []
+        incoming = keyed(events)
+        previous = keyed(existing)
+        changed_count = len(incoming.keys() ^ previous.keys())
+        changed_count += sum(incoming[key] != previous[key] for key in incoming.keys() & previous.keys())
         changed = changed_count > 0
         if changed:
             self.run_dir.mkdir(parents=True, exist_ok=True)

@@ -16,7 +16,7 @@ else
 CLI_OUT := ../../janus-cli
 endif
 
-.PHONY: build test schema schema-check shell clean help cli cli-all web-install web-build web-test test-dashboard serve
+.PHONY: build test test-python test-go check schema schema-check shell clean help cli cli-all web-install web-build web-test test-dashboard docker-smoke serve
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -33,6 +33,14 @@ test: build ## Run the test suite inside the container
 		-w /src \
 		$(IMAGE):$(TAG) -c "pip install -q pytest && pytest Tests/"
 
+test-python: ## Run the full Python test suite on the host
+	python3 -m pytest -q Tests/
+
+test-go: ## Run Go CLI tests
+	go test ./...
+
+check: schema-check test-python web-test web-build test-go ## Run all non-Docker validation gates
+
 schema: ## Generate report-model JSON Schema and TypeScript declarations
 	python3 scripts/generate_report_schema.py
 
@@ -43,12 +51,16 @@ web-install: ## Install locked dashboard dependencies
 	npm --prefix dashboard ci
 
 web-build: ## Type-check and build the dashboard
+	npm --prefix dashboard run typecheck
 	npm --prefix dashboard run build
 
 web-test: ## Run dashboard unit tests
 	npm --prefix dashboard run test
 
 test-dashboard: web-test ## Alias for dashboard unit tests
+
+docker-smoke: build ## Exercise static, served, and local live-source workflows in the production image
+	scripts/docker_smoke_test.sh $(IMAGE):$(TAG)
 
 serve: build ## Start the local dashboard through Docker Compose
 	docker compose up --build janus

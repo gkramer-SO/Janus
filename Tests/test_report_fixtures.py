@@ -106,4 +106,3 @@ def test_generated_schema_and_types_are_current() -> None:
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-
