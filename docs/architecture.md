@@ -17,9 +17,44 @@ The main boundaries are:
 
 Janus is deployed through the host-side `janus-cli` Docker wrapper, not as an always-on host service. Normal commands (`pull`, `analyze`, `report`, and `run`) start one disposable container for the requested job and exit when it completes. Persisted artifacts remain in the host `./out` mount.
 
-`janus-cli serve` is the deliberate exception: it starts one long-lived FastAPI/Uvicorn container for the local dashboard. The wrapper mounts `./Config` read-only at `/config`, mounts `./out` read/write at `/data/out`, publishes `127.0.0.1:<port>` to the container's port 8000, and waits for the container to exit. The server binds to `0.0.0.0` only inside the container; the host-side wrapper rejects remote binds. This is a local observation/reporting service, not a remotely exposed or C2-tasking service.
+`janus-cli serve` is the deliberate exception: it starts one long-lived FastAPI/Uvicorn container for the local dashboard. The wrapper mounts `./Config` read-only at `/config`, mounts `./out` read/write at `/data/out`, publishes only `127.0.0.1:<port>` to the container's port 8000, and waits for the container to exit. The server binds to `0.0.0.0` only inside the container; the host-side wrapper (`normalizeServeBind`) rejects any non-localhost `--bind`. This is a local observation/reporting service, not a remotely exposed or C2-tasking service. No authentication is implemented.
 
-With `serve --live`, the server starts one bounded worker for the selected source-backed run. Each poll reuses the existing source ingest implementation in an isolated staging directory, validates the normalized `events.ndjson` and `bundle.json`, and atomically promotes the complete snapshot only after a successful pull. This intentionally favors correct retention and source fidelity over a second, dashboard-specific client. The worker checkpoints snapshot provenance in `live-state.json`, debounces analyzer runs, preserves the last known-good report when ingest or analysis fails, and emits bounded SSE revision notifications for the served dashboard. Static reports remain immutable snapshots.
+Run discovery (see `Server/service.py`):
+- Recursively finds every `bundle.json` under the configured output root.
+- Skips dot-directories and paths ending in `.tmp`.
+- For each candidate directory it prefers a sibling `report-model.json` (fast path, used by the dashboard API). If absent it falls back to `build_report_model()` using `events.ndjson`, per-analyzer JSONs, and `bundle.json`.
+- Results are deduplicated by `run_id` and sorted by `analysis_completed_at` descending.
+- `--run-dir` (passed through the CLI) initializes `RunService` with a selected subdirectory, limiting the run list to exactly that entry.
+
+The served UI is a Preact SPA that fetches the model via `GET /api/v1/runs/{id}/report` (with ETag/304). Static `report.html` files are only needed for offline use; the live dashboard does not require them.
+
+**Primary API routes exposed by the dashboard container**
+- `GET /api/v1/health` — simple readiness
+- `GET /api/v1/version` — Janus + API version
+- `GET /api/v1/runs` — list of `{run_id, operation_name, task_count, ..., live}`
+- `GET /api/v1/runs/{run_id}` — single run summary
+- `GET /api/v1/runs/{run_id}/report` — the full `ReportModel` (the contract the UI renders)
+- `GET /api/v1/runs/{run_id}/status` — for live: full worker snapshot (phase, next_poll_at, error, ...); for static: `{phase: "complete", ...}`
+- `GET /api/v1/runs/{run_id}/stream` — SSE (live runs only)
+- `GET /api/v1/schema/report-model` — JSON Schema of the current model
+- `/` and `/runs/{run_id}` — the dashboard shell (compiled assets + embedded model for static reports)
+- `/assets/*` — long-term cached compiled Preact bundle
+
+All responses include `X-Request-ID`. Security headers (CSP, nosniff, DENY frame-ancestors, etc.) are always set.
+
+### Live mode behavior
+
+With `serve --live`:
+- A single worker is created (default location `out/live/<source>/`, stable `run_id = "live:<source>:<slug>"`).
+- The first poll + analysis must succeed before the HTTP server starts listening (the Go wrapper + Python `run_serve` block with a deadline of roughly `max(30, poll*2)` seconds).
+- Subsequent polls use full snapshots via the normal ingestors (in a staging dir), then atomically promote `events.ndjson`/`bundle.json` and re-run analyzers after the debounce.
+- Failures after the first success transition the worker to `DEGRADED` (with `stale: true` and `error`), but the last good `report-model.json` remains available.
+- The worker writes `live-state.json` (phase, revision, timings, checkpoint, consecutive failures, etc.).
+- The API annotates live runs (`"live": true`), injects the `LIVE_REVISIONS` capability, returns rich status from the worker, and serves `/api/v1/runs/{id}/stream` (SSE with bounded replay + keepalives).
+
+Live and static runs coexist under the same output root and appear together in the selector (unless `--run-dir` pins the view).
+
+The architecture intentionally reuses the exact same ingest, retention, normalization, and analyzer code for live snapshots instead of a separate "dashboard client." This guarantees identical privacy behavior and data quality metadata.
 
 The same Preact dashboard supports two modes: served mode fetches `report-model.json` through the same-origin API, while `janus report` embeds that validated model and compiled assets in a portable static `report.html`. Static reports do not require the server or network access.
 ## Docker wrapper networking

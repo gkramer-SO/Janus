@@ -42,7 +42,7 @@ cp Config/janus.example.yml Config/janus.yml # set source, redaction settings, e
 
 ## Local Dashboard
 
-`janus-cli serve` starts the one long-lived Janus container: a local, read-only dashboard at `http://127.0.0.1:8000`. It discovers completed runs under `out/` and serves the validated `report-model.json` contract. Press `Ctrl+C` to stop the container.
+`janus-cli serve` starts the one long-lived Janus container: a local, read-only dashboard at `http://127.0.0.1:8000`. It discovers completed runs under `out/` (by the presence of `bundle.json` + a valid `report-model.json` or buildable artifacts) and serves the validated `report-model.json` contract over a small FastAPI/Uvicorn API. Press `Ctrl+C` to stop the container.
 
 ```bash
 ./janus-cli serve
@@ -50,11 +50,33 @@ cp Config/janus.example.yml Config/janus.yml # set source, redaction settings, e
 ./janus-cli serve --port 8080
 ```
 
-When multiple runs are available, use the dashboard's run selector to move between them without restarting the server. Press `/` to focus report search; Enter and Shift+Enter move forward and backward through matching rows. The dashboard rejects incompatible report-model major versions with an explicit upgrade message.
+The server lists every discoverable run (newest first) in a selector. Selecting a run fetches its `report-model.json` via the API (ETag/304 supported). While the dashboard is running you can run additional `pull`, `analyze`, `run`, or `report` commands in other terminals; new or updated directories under `out/` appear immediately thanks to the live bind mount.
 
-The host-side wrapper publishes only to loopback and rejects remote `--bind` values. The app listens inside the container only so Docker can forward that local port. This does not change the ordinary workflow: `pull`, `analyze`, `report`, and `run` each launch a one-shot container and exit when finished. Source endpoints in `Config/janus.yml` must remain reachable from the container; on Docker Desktop, use `host.docker.internal` for an API running on the host.
+Keyboard: press `/` to focus search, Enter/Shift+Enter to step through matches. The dashboard rejects report-model major version mismatches with an upgrade message.
 
-Live mode starts one continuously refreshed run and remains local-only. It reuses the configured Mythic, Ghostwriter, Cobalt Strike REST, or Outflank ingest path in bounded full-snapshot polls, applies the same retention policy, then reruns the existing analyzers after the configured debounce period. The first snapshot is completed before the dashboard opens; later source or analysis failures leave the previous report available and surface a degraded status.
+**Run discovery notes**
+- Scans recursively under the output root for any `bundle.json`.
+- Prefers an existing `report-model.json`; otherwise falls back to building from `events.ndjson` + analyzer outputs + `bundle.json` in that directory.
+- Skips dot-directories and `.tmp` paths. Deduplicates by `run_id`.
+- Use `--run-dir out/complete/foo` (or a `live/...` path) to pin the server to a single run (the selector is hidden and only that run is served).
+
+The host-side wrapper **only publishes to loopback** and hard-rejects remote `--bind` values:
+
+```bash
+./janus-cli serve --bind 0.0.0.0   # error: remote exposure not supported
+```
+
+Inside the container the app listens on `0.0.0.0`; the published port on the host is always `127.0.0.1:<port>`. Ordinary one-shot commands (`pull`/`analyze`/`report`/`run`) are unaffected. Source endpoints in `Config/janus.yml` must be reachable *from inside the container* (use `host.docker.internal` on Docker Desktop, or `--docker-network host` / `--docker-add-host` as needed).
+
+### Live mode
+
+Live mode (`--live`) continuously refreshes **one** run from a source. It:
+
+- Creates (or reuses) a directory under `out/live/<source>/` by default (e.g. `out/live/mythic`).
+- Reuses the exact same ingest + retention + analyzer code paths as one-shot runs.
+- Performs full-snapshot polls, writes a stable `report-model.json` (run_id prefixed `live:<source>:...`), and debounces re-analysis.
+- Persists `live-state.json` with phase, timings, errors, and dedup state.
+- On the first snapshot the server waits (up to roughly `poll-interval * 2`) until the initial ingest + analysis reaches "ready" before the HTTP port is usable. Subsequent failures mark the run `degraded` / `stale` but continue serving the last good report.
 
 ```bash
 ./janus-cli serve --live --source mythic --op-id 42 --poll-interval 30 --analysis-debounce 2
@@ -62,7 +84,19 @@ Live mode starts one continuously refreshed run and remains local-only. It reuse
 ./janus-cli serve --live --source outflank --log-path out/input/implant_logs
 ```
 
-`janus-cli report` continues to produce a portable, self-contained `report.html` plus `report-model.json`; it does not require a dashboard server or internet connection to open.
+Live runs appear with a "live" badge, expose `/api/v1/runs/{id}/stream` (SSE) for real-time revision notifications, and carry the `LIVE_REVISIONS` capability.
+
+`janus-cli report` continues to produce a portable, self-contained `report.html` plus `report-model.json`; it does not require a dashboard server.
+
+### Alternative: Docker Compose
+
+```bash
+make serve          # docker compose up --build janus (static serve on 8000)
+```
+
+This uses the same mounts and the container `serve` command directly.
+
+For contributor validation, `make check` + `make docker-smoke` exercise the served health, run listing, dashboard routes, and a live Outflank ingest path.
 
 For contributor validation, `make check` runs schema drift detection, the full Python suite, dashboard tests and production build, and Go CLI tests. `make docker-smoke` additionally builds the production image and exercises static report generation plus the served health, run-listing, and dashboard routes.
 ## Demo 
@@ -136,6 +170,7 @@ Retention policies (`output_rule` and `arguments_rule`) control what normalized 
 - `report.html` - self-contained static dashboard snapshot, including source/parser confidence warnings
 - `bundle.json` - versioned JSON metadata for automation and downstream tooling, including structured `data_quality`
 - `events.ndjson` - normalized event stream for debugging, replay, and testing
+- `live-state.json` - live worker checkpoint (phase, timings, errors, dedup keys) under `out/live/...` directories only
 
 Analyzer outputs include `friction-score.json` when the friction score analyzer is enabled. The HTML report surfaces the top friction candidates and their recommendation metadata.
 

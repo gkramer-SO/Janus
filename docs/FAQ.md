@@ -267,3 +267,40 @@ Rebuild the Docker image before rerunning analysis:
 ### `go.sum` keeps getting corrupted
 
 VS Code can append hidden JSON blobs to files in some cases. If `go.sum` looks wrong again, delete and regenerate it the same way as above.
+
+## Dashboard (`janus-cli serve`)
+
+### Where does live data go?
+
+By default `serve --live` writes to `out/live/<source>/` (for example `out/live/mythic`). The run id inside the model will be `live:mythic:mythic` (or similar). You can override the directory with `--run-dir out/live/my-special-run`.
+
+### The dashboard says "no runs" even though I have data under `out/complete`
+
+Make sure each run directory contains a `bundle.json` (even an empty `{}` works for discovery) and a `report-model.json`. The scanner only looks for `bundle.json` and then loads or builds the model. Dot-directories and `.tmp` paths are ignored.
+
+While the server is running you can add or update directories; the run selector reflects changes on the next `/api/v1/runs` poll from the browser.
+
+### Live mode hangs or fails before the server starts
+
+Live serve waits for the *first* full poll + analysis to reach the `ready` phase. If the source is unreachable, auth is wrong, or the initial analysis errors, it will time out and exit with an error. Check the terminal output (or the error in the degraded state if it partially started).
+
+The same Docker networking rules that apply to `pull`/`run` also apply here (see "Cobalt Strike REST and janus-cli + Docker" above and the networking section in architecture.md).
+
+### Can I use `--run-dir` with a live run?
+
+Yes. Point it at the live directory (e.g. `--run-dir out/live/mythic`) or pass the same flags again; the worker will resume from `live-state.json`.
+
+### Do I need `report.html` for the served dashboard?
+
+No. The served experience fetches the model over the API and renders it client-side. `report.html` is only required for the portable/offline static report produced by `janus-cli report`.
+
+### How do I restart the dashboard quickly without rebuilding the image every time?
+
+Use `--no-build`:
+
+```bash
+./janus-cli serve --no-build
+./janus-cli serve --no-build --live --source outflank --log-path out/input/...
+```
+
+The image is only rebuilt when source or dependencies change. `make serve` always does `--build`.
