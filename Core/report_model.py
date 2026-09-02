@@ -435,6 +435,7 @@ class EntropyFinding(StrictModel):
     task: TaskRef
     finding_type: str
     token_entropy: float | None = Field(default=None, ge=0)
+    token: str | None = None
     detail: str
 
 

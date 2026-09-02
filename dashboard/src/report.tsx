@@ -159,6 +159,68 @@ export function DotPlot({ title, question, data, formatValue = text }: { title: 
   </ChartFrame>;
 }
 
+const ENTROPY_FLAG_THRESHOLD = 4.5;
+const ENTROPY_SCALE_MAX = 8;
+
+function entropyKind(findingType: string): "high" | "low" {
+  return findingType === "low_entropy_for_expected_high_entropy_command" ? "low" : "high";
+}
+
+function entropyKindLabel(findingType: string): string {
+  if (findingType === "high_entropy_token") return "High-entropy token";
+  if (findingType === "low_entropy_for_expected_high_entropy_command") return "Below expected entropy";
+  return findingType.replace(/_/g, " ");
+}
+
+export function EntropyPlot({ findings }: { findings: Array<{ label: string; value: number; findingType: string; token?: string | null }> }) {
+  const [active, setActive] = useState(0);
+  const visible = [...findings]
+    .filter((finding) => Number.isFinite(finding.value))
+    .sort((left, right) => {
+      const leftLow = entropyKind(left.findingType) === "low";
+      const rightLow = entropyKind(right.findingType) === "low";
+      if (leftLow !== rightLow) return leftLow ? -1 : 1;
+      return right.value - left.value;
+    })
+    .slice(0, 12);
+  const identity = visible.map((finding) => `${finding.label}:${finding.value}:${finding.findingType}`).join("|");
+  useEffect(() => setActive(0), [identity]);
+  if (!visible.length) return null;
+  const scaleMax = Math.max(ENTROPY_SCALE_MAX, ...visible.map((finding) => finding.value));
+  const selected = visible[active] ?? visible[0];
+  const mark = (bits: number) => `${(bits / scaleMax) * 100}%`;
+  return <ChartFrame title="Shannon entropy by argument" detail={`${visible.length} scored finding${visible.length === 1 ? "" : "s"} · bits/char vs 4.5 flag`} question="Which arguments look encoded, or too weak for a command that should carry a blob?">
+    <div class="chart-readout" aria-live="polite"><span>{selected.token ? <code class="entropy-token">{selected.token}</code> : `${selected.label} · ${entropyKindLabel(selected.findingType)}`}</span><strong>{selected.value.toFixed(2)} bits/char</strong></div>
+    <div class="entropy-plot">
+      <div class="entropy-scale" aria-hidden="true">
+        <span />
+        <div class="entropy-track-scale">
+          <span class="entropy-tick" style={{ left: "0" }}>0</span>
+          <span class="entropy-tick" style={{ left: mark(4) }}>4.0 English</span>
+          <span class="entropy-tick flag" style={{ left: mark(ENTROPY_FLAG_THRESHOLD) }}>4.5 flag</span>
+          <span class="entropy-tick" style={{ left: mark(6) }}>6.0 base64</span>
+          <span class="entropy-tick end" style={{ left: "100%" }}>{scaleMax.toFixed(0)}</span>
+        </div>
+        <span />
+      </div>
+      {visible.map((finding, index) => {
+        const kind = entropyKind(finding.findingType);
+        const overFlag = finding.value >= ENTROPY_FLAG_THRESHOLD;
+        return <button type="button" class={`entropy-row${index === active ? " active" : ""}`} key={`${finding.label}-${index}`} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} aria-label={`${finding.label}, ${entropyKindLabel(finding.findingType)}: ${finding.value.toFixed(2)} bits per character${overFlag ? ", at or above the 4.5 flag threshold" : ""}`}>
+          <span title={finding.label}><strong>{finding.label}</strong><small>{finding.token || entropyKindLabel(finding.findingType)}</small></span>
+          <i class="entropy-track" aria-hidden="true">
+            <em class="entropy-english" style={{ width: mark(4) }} />
+            <b class={`entropy-bar ${kind}${overFlag ? " flagged" : ""}`} style={{ width: `${(finding.value / scaleMax) * 100}%` }} />
+            <i class="entropy-threshold" style={{ left: mark(ENTROPY_FLAG_THRESHOLD) }} />
+          </i>
+          <strong>{finding.value.toFixed(2)}</strong>
+        </button>;
+      })}
+    </div>
+    <div class="inline-legend entropy-legend"><span><i class="entropy-high" />At or above 4.5 flag</span><span><i class="entropy-low" />Below expected for the command</span></div>
+  </ChartFrame>;
+}
+
 export function DonutChart({ title, question, data }: { title: string; question?: string; data: ChartSegment[] }) {
   const [active, setActive] = useState(0);
   const visible = data.filter((datum) => Number.isFinite(datum.value) && datum.value > 0);
@@ -490,7 +552,8 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
     case "parameter-entropy": {
       const findings = (section.findings ?? []).filter((row) => matches(row, query));
       const repeated = (section.repeated_tokens ?? []).filter((row) => matches(row, query));
-      return <><DotPlot title="Highest parameter entropy" question="Which retained task parameters contain the strongest entropy signal?" data={findings.map((row) => ({ label: `${row.task.command_name ?? "Task"} #${row.task.display_id ?? row.task.task_id} · ${row.finding_type}`, value: row.token_entropy ?? 0 }))} /><Table searching={Boolean(query)} label={section.title} headers={["Task", "Finding", "Entropy", "Detail"]} rows={findings.map((row, index) => ({ key: String(index), values: [<Task task={row.task} />, row.finding_type, text(row.token_entropy), row.detail], sortValues: [row.task.display_id ?? row.task.task_id, row.finding_type, row.token_entropy, row.detail] }))} />{repeated.length > 0 && <Detail label={`${section.repeated_token_count ?? repeated.length} repeated high-entropy token(s)`}><Table searching={Boolean(query)} label="Repeated high-entropy tokens" headers={["Prefix", "Mean entropy", "Occurrences", "Commands", "Detail"]} rows={repeated.map((row) => ({ key: row.token_prefix, values: [row.token_prefix, text(row.entropy_mean), row.occurrences, (row.commands ?? []).join(", "), row.detail], sortValues: [row.token_prefix, row.entropy_mean, row.occurrences, (row.commands ?? []).join(", "), row.detail] }))} /></Detail>}</>;
+      const entropyFindings = findings.filter((row) => row.token_entropy !== null && row.token_entropy !== undefined).map((row) => ({ label: `${row.task.command_name ?? "Task"} #${row.task.display_id ?? row.task.task_id}`, value: row.token_entropy ?? 0, findingType: row.finding_type, token: row.token }));
+      return <><EntropyPlot findings={entropyFindings} /><Table searching={Boolean(query)} label={section.title} headers={["Task", "Finding", "Token", "Entropy", "Detail"]} initialSortColumn={3} initialSortDirection="descending" rows={findings.map((row, index) => ({ key: String(index), values: [<Task task={row.task} />, row.finding_type, row.token ? <code class="entropy-token">{row.token}</code> : "—", text(row.token_entropy), row.detail], sortValues: [row.task.display_id ?? row.task.task_id, row.finding_type, row.token, row.token_entropy ?? -1, row.detail] }))} />{repeated.length > 0 && <Detail label={`${section.repeated_token_count ?? repeated.length} repeated high-entropy token(s)`}><Table searching={Boolean(query)} label="Repeated high-entropy tokens" headers={["Prefix", "Mean entropy", "Occurrences", "Commands", "Detail"]} rows={repeated.map((row) => ({ key: row.token_prefix, values: [row.token_prefix, text(row.entropy_mean), row.occurrences, (row.commands ?? []).join(", "), row.detail], sortValues: [row.token_prefix, row.entropy_mean, row.occurrences, (row.commands ?? []).join(", "), row.detail] }))} /></Detail>}</>;
     }
     case "argument-position-profile": {
       const findings = (section.findings ?? []).filter((row) => matches(row, query));

@@ -1563,6 +1563,18 @@
         "task": {
           "$ref": "#/$defs/TaskRef"
         },
+        "token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token"
+        },
         "token_entropy": {
           "anyOf": [
             {

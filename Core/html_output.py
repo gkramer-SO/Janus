@@ -2958,11 +2958,14 @@ def _render_parameter_entropy(data: dict, mythic_base_url: str = "") -> str:
         task_ref = _task_link(mythic_base_url, finding.get("task_id", "?"), finding.get("display_id") or None)
         entropy = finding.get("token_entropy")
         entropy_display = f"{entropy:.2f}" if isinstance(entropy, (int, float)) else "<em>N/A</em>"
+        token = finding.get("token") or ""
+        token_display = f"<code>{html.escape(str(token))}</code>" if token else "<em>N/A</em>"
         rows.append(f"""
         <tr>
             <td>{task_ref}</td>
             <td class="wrap-cell">{_wrap_cell_text(finding.get('command_name', ''))}</td>
             <td><code>{html.escape(str(finding.get('finding_type', '')))}</code></td>
+            <td class="args-display">{token_display}</td>
             <td>{entropy_display}</td>
             <td class="wrap-cell">{_wrap_cell_text(finding.get('detail', ''))}</td>
             <td>{_fmt_args_cell(finding.get('arguments_raw', ''), event=finding)}</td>
@@ -2981,6 +2984,7 @@ def _render_parameter_entropy(data: dict, mythic_base_url: str = "") -> str:
                 <th>Task</th>
                 <th>Command</th>
                 <th>Finding Type</th>
+                <th>Token</th>
                 <th>Entropy</th>
                 <th>Detail</th>
                 <th>Arguments</th>

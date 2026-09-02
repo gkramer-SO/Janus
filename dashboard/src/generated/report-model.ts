@@ -52,7 +52,7 @@ export interface DwellRow { "from_task": TaskRef; "to_task": TaskRef; "dwell_sec
 
 export interface DwellTimeSection { "id": string; "title": string; "status": SectionStatus; "status_reason"?: string | null; "warnings"?: Array<ReportWarning>; "sources"?: Array<SourceKind>; "confidence"?: ConfidenceLevel | null; "kind": "dwell-time"; "measurements"?: Array<DwellRow>; "distribution"?: Array<DwellDistributionBucket>; "measurement_count"?: number; "median_seconds"?: number | null; "p95_seconds"?: number | null; "max_seconds"?: number | null }
 
-export interface EntropyFinding { "task": TaskRef; "finding_type": string; "token_entropy"?: number | null; "detail": string }
+export interface EntropyFinding { "task": TaskRef; "finding_type": string; "token_entropy"?: number | null; "token"?: string | null; "detail": string }
 
 export interface FailureDetail { "task": TaskRef; "status"?: string; "dispatch_failed"?: boolean; "output_preview"?: TextPreview | null }
 

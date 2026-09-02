@@ -211,6 +211,35 @@ describe("report sections", () => {
     expect(screen.getByText(/6 tool matches were reported, but the matching invocation details were not retained/i)).toBeTruthy();
   });
 
+  it("plots parameter entropy against the Shannon flag threshold instead of a ranked dot line", () => {
+    const section = {
+      id: "entropy",
+      title: "Parameter Entropy",
+      kind: "parameter-entropy",
+      status: "available",
+      findings: [
+        { task: { task_id: "161", display_id: "161", command_name: "cat" }, finding_type: "high_entropy_token", token_entropy: 4.83, token: "Y2hhbGxlbmdlLXRva2Vu…[+80]", detail: "Token entropy 4.83 bits/char" },
+        { task: { task_id: "12", display_id: "12", command_name: "download" }, finding_type: "high_entropy_token", token_entropy: 5.1, detail: "Token entropy 5.10 bits/char" },
+        { task: { task_id: "9", display_id: "9", command_name: "ptt" }, finding_type: "low_entropy_for_expected_high_entropy_command", token_entropy: 3.1, detail: "Below expected minimum" },
+        { task: { task_id: "4", display_id: "4", command_name: "ls" }, finding_type: "wildcard_path", token_entropy: null, detail: "3 wildcard chars" },
+      ],
+    } as ReportSection;
+
+    const view = render(<SectionPanel section={section} query="" />);
+    fireEvent.click(screen.getByText("Parameter Entropy").closest("summary")!);
+    const chart = screen.getByRole("figure", { name: "Shannon entropy by argument" });
+    expect(screen.queryByRole("figure", { name: "Highest parameter entropy" })).toBeNull();
+    expect(view.container.querySelector(".dot-plot")).toBeNull();
+    expect(chart.querySelectorAll(".entropy-bar")).toHaveLength(3);
+    expect(chart.querySelectorAll(".entropy-bar.low")).toHaveLength(1);
+    expect(chart.querySelectorAll(".entropy-threshold")).toHaveLength(3);
+    expect(chart.querySelector(".entropy-tick.flag")?.textContent).toMatch(/4\.5 flag/i);
+    expect(within(chart).queryByText(/wildcard/i)).toBeNull();
+    const table = screen.getByRole("table", { name: "Parameter Entropy" });
+    expect(within(table).getByRole("button", { name: /Entropy ↓/i })).toBeTruthy();
+    expect(within(table).getByText("Y2hhbGxlbmdlLXRva2Vu…[+80]")).toBeTruthy();
+  });
+
   it("does not render empty evidence disclosures", () => {
     const entropy = {
       id: "entropy",

@@ -202,6 +202,7 @@ def complete_mythic() -> dict:
                     "task": task(),
                     "finding_type": "high-entropy-token",
                     "token_entropy": 4.2,
+                    "token": "Y2hhbGxlbmdlLXRva2Vu",
                     "detail": "An uncommon token structure was observed.",
                 }
             ],

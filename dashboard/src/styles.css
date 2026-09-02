@@ -93,6 +93,7 @@ p, li { text-wrap: pretty; }
 .event-list pre { margin: 0; max-width: 100%; overflow: auto; white-space: pre-wrap; }
 .task-list code { display: block; margin-top: .3rem; color: var(--muted); overflow-wrap: anywhere; }
 .tool-invocation { display: block; min-width: 12rem; background: transparent; color: #fff; overflow-wrap: anywhere; white-space: pre-wrap; }
+.entropy-token { display: inline-block; max-width: 28rem; background: transparent; color: #fff; overflow-wrap: anywhere; white-space: pre-wrap; font-size: .78rem; }
 .tool-group { display: block; min-width: 9rem; }
 .artifact-note { margin: .65rem 0 0; color: var(--muted); font-size: .72rem; overflow-wrap: anywhere; }
 .timeline-list li { display: flex; align-items: center; justify-content: space-between; }
@@ -128,7 +129,8 @@ p, li { text-wrap: pretty; }
 .data-chart figcaption small { color: var(--muted); font-size: .65rem; font-weight: 500; text-align: right; }
 .chart-question { margin: -.35rem 0 1rem; max-width: 52rem; color: var(--muted); font-size: .75rem; }
 .chart-readout { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; min-height: 2.5rem; margin: -.25rem 0 .65rem; }
-.chart-readout span { color: var(--muted); font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-readout span { min-width: 0; color: var(--muted); font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-readout .entropy-token { max-width: 100%; white-space: pre-wrap; }
 .chart-readout strong { flex: 0 0 auto; font-size: .82rem; font-variant-numeric: tabular-nums; }
 
 .donut-layout { display: grid; grid-template-columns: minmax(8.5rem, 10.5rem) minmax(0, 1fr); align-items: center; gap: 1rem; }
@@ -231,6 +233,30 @@ p, li { text-wrap: pretty; }
 .sequence-signature > span { color: var(--muted); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; }
 .sequence-signature code { padding: .55rem .65rem; border-radius: 6px; background: rgba(255, 255, 255, .055); overflow-wrap: anywhere; white-space: normal; }
 
+.entropy-plot { display: grid; gap: .2rem; min-width: 0; }
+.entropy-scale, .entropy-row { display: grid; grid-template-columns: minmax(7rem, 12rem) minmax(8rem, 1fr) minmax(3.6rem, auto); align-items: center; gap: .8rem; width: 100%; min-width: 0; }
+.entropy-scale { min-height: 1.35rem; color: var(--muted); font-size: .58rem; font-variant-numeric: tabular-nums; }
+.entropy-track-scale { position: relative; height: 1.2rem; min-width: 0; }
+.entropy-tick { position: absolute; top: 0; max-width: 6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; translate: -50% 0; }
+.entropy-tick.flag { color: #fff; }
+.entropy-tick.end { translate: -100% 0; }
+.entropy-row { min-height: 44px; padding: .35rem .45rem; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; transition-property: background-color, scale; transition-duration: 150ms; }
+.entropy-row:hover, .entropy-row:focus-visible, .entropy-row.active { background: var(--faint); outline: none; }
+.entropy-row:active { scale: .96; }
+.entropy-row > span { display: grid; gap: .15rem; min-width: 0; }
+.entropy-row > span strong, .entropy-row > span small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entropy-row > span small { color: var(--muted); font-size: .62rem; }
+.entropy-row > strong { text-align: right; font-size: 1.05rem; font-variant-numeric: tabular-nums; font-weight: 620; }
+.entropy-track { position: relative; display: block; height: 12px; min-width: 0; overflow: visible; border-radius: 999px; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.entropy-english { position: absolute; inset: 0 auto 0 0; border-radius: 999px 0 0 999px; background: rgba(255, 255, 255, .05); pointer-events: none; }
+.entropy-bar { position: relative; z-index: 1; display: block; height: 100%; min-width: 2px; border-radius: 999px; background: var(--accent); opacity: .78; }
+.entropy-bar.flagged { background: #f3b63d; opacity: 1; }
+.entropy-bar.low { background: var(--error); opacity: 1; }
+.entropy-threshold { position: absolute; z-index: 2; top: -5px; bottom: -5px; width: 1px; background: #fff; pointer-events: none; }
+.entropy-legend { margin-left: min(34%, 12.8rem); }
+.inline-legend i.entropy-high { background: #f3b63d; }
+.inline-legend i.entropy-low { background: var(--error); }
+
 .dot-plot, .range-plot, .stacked-chart { display: grid; gap: .25rem; }
 .plot-scale { display: flex; justify-content: space-between; margin-left: min(34%, 12rem); padding: 0 4.5rem .15rem 0; color: var(--muted); font-size: .6rem; font-variant-numeric: tabular-nums; }
 .dot-row, .range-row { display: grid; grid-template-columns: minmax(7rem, 12rem) minmax(8rem, 1fr) minmax(4rem, auto); align-items: center; gap: .8rem; width: 100%; min-height: 40px; padding: .35rem .45rem; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: .75rem; text-align: left; transition-property: background-color, scale; transition-duration: 150ms; }
@@ -272,7 +298,7 @@ p, li { text-wrap: pretty; }
 footer { margin-top: 2rem; font-size: .72rem; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) {
-  .section-toggle, .table-wrap th button, .donut-segment, .chart-legend button, .timeline-bucket, .timeline-bar, .outlier-picker button, .dot-row, .range-row, .dot-track b, .stack-track button, .dwell-plot > button, .dwell-bar-space i { transition-duration: 0s; }
+  .section-toggle, .table-wrap th button, .donut-segment, .chart-legend button, .timeline-bucket, .timeline-bar, .outlier-picker button, .dot-row, .range-row, .entropy-row, .dot-track b, .stack-track button, .dwell-plot > button, .dwell-bar-space i { transition-duration: 0s; }
 }
 @media (max-width: 760px) {
   main { width: min(100% - 1.5rem, 1200px); padding-top: 1.5rem; }
@@ -290,9 +316,9 @@ footer { margin-top: 2rem; font-size: .72rem; overflow-wrap: anywhere; }
   .outlier-workspace { grid-template-columns: 1fr; }
   .outlier-picker { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); max-height: none; }
   .outlier-inspector { padding: .85rem; }
-  .dot-row, .range-row, .stacked-row { grid-template-columns: minmax(5rem, 7rem) 1fr; }
+  .dot-row, .range-row, .stacked-row, .entropy-row, .entropy-scale { grid-template-columns: minmax(5rem, 7rem) 1fr; }
   .stack-counts { grid-column: 1 / -1; justify-content: start; }
-  .dot-row > strong, .range-row > strong { grid-column: 2; }
+  .dot-row > strong, .range-row > strong, .entropy-row > strong { grid-column: 2; }
   .plot-scale { margin-left: 7.8rem; padding-right: .45rem; }
-  .inline-legend { margin-left: 7.8rem; }
+  .inline-legend, .entropy-legend { margin-left: 7.8rem; }
 }
