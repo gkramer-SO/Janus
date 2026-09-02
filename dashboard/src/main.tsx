@@ -134,9 +134,11 @@ export function App() {
       </select>
     </label>}
     {lastUpdated && <p class="last-updated">Dashboard refreshed {new Date(lastUpdated).toLocaleTimeString()}</p>}
-    {model.previous_runs && model.previous_runs.length > 0 && <section class="previous-runs"><h2>Previous runs</h2><ul>{model.previous_runs.map((run) => <li key={run.run_id}>{mode === "served" ? <a href={`/runs/${encodeURIComponent(run.run_id)}`}>{run.label}</a> : <SafeAnchor link={run.link} />} <time dateTime={run.generated_at}>{new Date(run.generated_at).toLocaleString()}</time></li>)}</ul></section>}
+    {((model.previous_runs?.length ?? 0) > 0 || (model.warnings?.length ?? 0) > 0) && <section class="run-notices" aria-label="Run notices">
+      {model.previous_runs && model.previous_runs.length > 0 && <section class="previous-runs" aria-label="Previous runs"><strong>Previous run{model.previous_runs.length === 1 ? "" : "s"}</strong><ul>{model.previous_runs.map((run) => <li key={run.run_id}>{mode === "served" ? <a href={`/runs/${encodeURIComponent(run.run_id)}`}>{run.label}</a> : <SafeAnchor link={run.link} />} <time dateTime={run.generated_at}>{new Date(run.generated_at).toLocaleString()}</time></li>)}</ul></section>}
+      {(model.warnings?.length ?? 0) > 0 && <section class="warnings" role="alert" aria-label="Run warnings"><i aria-hidden="true">!</i><div>{model.warnings?.map((warning) => <p key={`${warning.code}:${warning.section_id ?? "run"}`}>{warning.message}</p>)}</div></section>}
+    </section>}
     {model.diff && <section class="diff-overview"><h2>Comparison</h2><p>{model.diff.baseline_run_id} → {model.diff.candidate_run_id} · {model.diff.comparability_status}</p>{model.diff.warnings?.map((warning) => <p key={warning}>{warning}</p>)}</section>}
-    {(model.warnings?.length ?? 0) > 0 && <section class="warnings"><h2>Warnings</h2>{model.warnings?.map((warning) => <p key={`${warning.code}:${warning.section_id ?? "run"}`}>{warning.message}</p>)}</section>}
     <label class="report-search">Search analysis
       <input ref={searchRef} value={query} onInput={(event) => setQuery((event.target as HTMLInputElement).value)} placeholder="Command, callback, finding…" aria-describedby="search-help" />
       <small id="search-help">Press / to focus; Enter and Shift+Enter move through matches.</small>

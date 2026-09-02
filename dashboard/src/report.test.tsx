@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { SectionPanel } from "./report";
@@ -11,6 +11,29 @@ type ReportSection = NonNullable<ReportModel["sections"]>[number];
 afterEach(cleanup);
 
 describe("report sections", () => {
+  it("ports the report status donut and time-bucket histogram as interactive charts", () => {
+    const section = {
+      id: "summary",
+      title: "Summary Analysis",
+      kind: "summary-visualization",
+      status: "available",
+      status_distribution: { success: 5, error: 1, unknown: 0, other: 0 },
+      timeline: [
+        { starts_at: "2026-07-27T15:00:00Z", count: 2 },
+        { starts_at: "2026-07-27T16:00:00Z", count: 4 },
+      ],
+    } as ReportSection;
+
+    render(<SectionPanel section={section} query="" />);
+    const statusChart = screen.getByRole("figure", { name: "Command Status Distribution" });
+    const timelineChart = screen.getByRole("figure", { name: "Command Volume Timeline" });
+    expect(statusChart.querySelectorAll(".donut-segment")).toHaveLength(2);
+    expect(timelineChart.querySelectorAll(".timeline-bar")).toHaveLength(2);
+
+    fireEvent.click(within(statusChart).getByRole("button", { name: /Error.*16\.7%/i }));
+    expect(statusChart.querySelector(".donut-center")?.textContent).toContain("1Error");
+  });
+
   it("renders a structured command table rather than raw model JSON", () => {
     const section = {
       id: "failures",
@@ -23,8 +46,9 @@ describe("report sections", () => {
     render(<SectionPanel section={section} query="" />);
     fireEvent.click(screen.getByText("Command failures").closest("summary")!);
 
-    expect(screen.getByRole("table", { name: "Command failures" })).toBeTruthy();
-    expect(screen.getByText("shell")).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Command failures" });
+    expect(within(table).getByText("shell")).toBeTruthy();
+    expect(screen.getByRole("figure", { name: "Failure rate by command" })).toBeTruthy();
     expect(document.body.textContent).not.toContain('"command_name"');
   });
 
@@ -39,6 +63,7 @@ describe("report sections", () => {
 
     render(<SectionPanel section={section} query="" />);
     fireEvent.click(screen.getByText("Tool dump").closest("summary")!);
+    expect(screen.getByLabelText(/missing: no tool dump artifact was generated/i)).toBeTruthy();
     expect(screen.getByText("No tool dump artifact was generated.")).toBeTruthy();
   });
 
@@ -55,12 +80,12 @@ describe("report sections", () => {
     } as ReportSection;
 
     const view = render(<SectionPanel section={section} query="fast" />);
-    expect(screen.getByText("fast")).toBeTruthy();
+    expect(within(screen.getByRole("table", { name: "Command duration" })).getByText("fast")).toBeTruthy();
     expect(view.container.querySelector("[data-search-match='true']")).toBeTruthy();
 
     view.rerender(<SectionPanel section={section} query="" />);
     fireEvent.click(screen.getByText("Command duration").closest("summary")!);
-    fireEvent.click(screen.getByRole("button", { name: /median/i }));
+    fireEvent.click(within(screen.getByRole("table", { name: "Command duration" })).getByRole("button", { name: /median/i }));
     const rows = [...view.container.querySelectorAll("tbody tr")];
     expect(rows.map((row) => row.firstElementChild?.textContent)).toEqual(["fast", "slow"]);
   });

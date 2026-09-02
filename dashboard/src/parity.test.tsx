@@ -27,6 +27,7 @@ describe("report migration parity", () => {
     expect(screen.getByText(/context for task 101/i)).toBeTruthy();
     expect(screen.getByText(/tool-dump\/assembly-tools.ndjson/i)).toBeTruthy();
     expect(screen.getByText(/depth distribution/i)).toBeTruthy();
+    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(14);
   });
 
   it("renders diff summary, findings, and entity presence from the diff fixture", () => {
@@ -38,6 +39,7 @@ describe("report migration parity", () => {
 
     expect(screen.getByText(/comparability:/i)).toBeTruthy();
     expect(screen.getByRole("table", { name: "Run Diff" })).toBeTruthy();
+    expect(screen.getByRole("figure", { name: "Metric change magnitude" })).toBeTruthy();
     expect(screen.getByText(/entity presence changes/i)).toBeTruthy();
   });
 });
