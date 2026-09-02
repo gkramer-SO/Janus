@@ -1,8 +1,13 @@
 IMAGE   := janus
 TAG     := latest
 
-# Use awk so building the Go CLI does not depend on a Python executable.
+# Read the package version without requiring Python. PowerShell is available on
+# supported Windows hosts; Unix-like hosts use awk.
+ifeq ($(OS),Windows_NT)
+JANUS_VERSION := $(shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/read_project_version.ps1 pyproject.toml)
+else
 JANUS_VERSION := $(shell awk 'BEGIN { in_project = 0 } /^\[project\]/ { in_project = 1; next } /^\[/ { in_project = 0 } in_project && /^version[[:space:]]*=/ { gsub(/"/, "", $$3); print $$3; exit }' pyproject.toml)
+endif
 ifeq ($(strip $(JANUS_VERSION)),)
 $(error Could not read version from pyproject.toml)
 endif
