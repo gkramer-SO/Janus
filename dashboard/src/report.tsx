@@ -195,6 +195,7 @@ export function TimelineChart({ title, question, data }: { title: string; questi
   const maximum = Math.max(...data.map((datum) => datum.value), 1);
   const selected = data[active] ?? data[data.length - 1];
   const labelEvery = Math.max(1, Math.ceil(data.length / 6));
+  const gridColumns = `repeat(${data.length}, minmax(0, 1fr))`;
   const moveFocus = (index: number, key: string, container: HTMLElement) => {
     let next = index;
     if (key === "ArrowLeft") next = Math.max(0, index - 1);
@@ -203,21 +204,23 @@ export function TimelineChart({ title, question, data }: { title: string; questi
     else if (key === "End") next = data.length - 1;
     else return false;
     setActive(next);
-    container.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
+    container.querySelectorAll<HTMLButtonElement>(".timeline-bucket")[next]?.focus();
     return true;
   };
   return <ChartFrame title={title} detail={`${data.length} activity intervals · hover, focus, or use arrow keys`} question={question}>
     <div class="chart-readout" aria-live="polite"><span>{new Date(selected.label).toLocaleString()}</span><strong>{selected.displayValue ?? `${selected.value} task${selected.value === 1 ? "" : "s"}`}</strong></div>
     <div class="timeline-chart" role="group" aria-label={`${title}: ${data.length} activity intervals`}>
       <div class="timeline-scale" aria-hidden="true"><span>{maximum}</span><span>{Math.round(maximum / 2)}</span><span>0</span></div>
-      <div class="timeline-scroll">
-        <div class="timeline-bars" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(44px, 1fr))` }}>
+      <div class="timeline-plot">
+        <div class="timeline-bars" style={{ gridTemplateColumns: gridColumns }}>
           {data.map((datum, index) => <button type="button" class={`timeline-bucket${index === active ? " active" : ""}`} key={`${datum.label}-${index}`} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} onKeyDown={(event) => {
-            if (moveFocus(index, event.key, event.currentTarget.parentElement!)) event.preventDefault();
+            if (moveFocus(index, event.key, event.currentTarget.parentElement!.parentElement!)) event.preventDefault();
           }} aria-pressed={index === active} aria-label={`${new Date(datum.label).toLocaleString()}: ${datum.value} task${datum.value === 1 ? "" : "s"}`}>
             <span class="timeline-bar-space" aria-hidden="true"><i class="timeline-bar" style={{ height: `${datum.value ? Math.max(4, (datum.value / maximum) * 100) : 0}%` }} /></span>
-            <time dateTime={datum.label} aria-hidden="true">{index % labelEvery === 0 || index === data.length - 1 ? new Date(datum.label).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric" }) : ""}</time>
           </button>)}
+        </div>
+        <div class="timeline-axis" style={{ gridTemplateColumns: gridColumns }} aria-hidden="true">
+          {data.map((datum, index) => <span key={`${datum.label}-axis-${index}`}>{index % labelEvery === 0 || index === data.length - 1 ? new Date(datum.label).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric" }) : ""}</span>)}
         </div>
       </div>
     </div>
@@ -241,7 +244,7 @@ function outlierKey(row: OutlierRow): string {
 function ContextStep({ task, phase, selected = false }: { task: TaskRef; phase: "Before" | "Outlier" | "After"; selected?: boolean }) {
   return <article class={`context-step${selected ? " selected" : ""}`}>
     <small>{phase}</small>
-    <strong>{task.command_name ?? "Unknown command"}</strong>
+    <ToolInvocation task={task} />
     <Task task={task} />
   </article>;
 }
@@ -288,7 +291,7 @@ function OutlierExplorer({ outliers }: { outliers: OutlierRow[] }) {
         </button>)}
       </div>
       <article class="outlier-inspector" aria-live="polite">
-        <header><div><small>Selected outlier</small><h3>{selected.task.command_name ?? "Unknown command"}</h3><Task task={selected.task} /></div><strong>{duration(selected.duration_seconds)}</strong></header>
+        <header><div><small>Selected outlier</small><ToolInvocation task={selected.task} /><Task task={selected.task} /></div><strong>{duration(selected.duration_seconds)}</strong></header>
         <div class="context-sequence" role="group" aria-label={`Command context for task ${selected.task.display_id ?? selected.task.task_id}`}>
           {sequence.map((step, index) => <div class="context-node" key={`${step.phase}-${step.task.task_id}-${index}`}>{index > 0 && <span class="context-arrow" aria-hidden="true">→</span>}<ContextStep {...step} /></div>)}
         </div>
@@ -314,7 +317,7 @@ export function StackedChart({ title, question, rows }: { title: string; questio
     <div class="chart-readout" aria-live="polite"><span>{selectedRow.label} · {selectedSegment.label}</span><strong>{selectedSegment.value.toLocaleString()} · {selectedTotal ? ((selectedSegment.value / selectedTotal) * 100).toFixed(1) : "0.0"}%</strong></div>
     <div class="stacked-chart">{visible.map((row, rowIndex) => {
       const total = row.segments.reduce((sum, segment) => sum + segment.value, 0);
-      return <div class="stacked-row" key={row.label}><span title={row.label}>{row.label}</span><div class="stack-track">{row.segments.map((segment, segmentIndex) => segment.value > 0 && <button type="button" key={segment.label} class={segment.tone ?? "accent"} style={{ width: `${(segment.value / total) * 100}%` }} onMouseEnter={() => setActive({ row: rowIndex, segment: segmentIndex })} onFocus={() => setActive({ row: rowIndex, segment: segmentIndex })} onClick={() => setActive({ row: rowIndex, segment: segmentIndex })} aria-label={`${row.label}, ${segment.label}: ${segment.value}`}><span>{segment.value}</span></button>)}</div><strong>{total}</strong></div>;
+      return <div class="stacked-row" key={row.label}><span title={row.label}>{row.label}</span><div class="stack-track">{row.segments.map((segment, segmentIndex) => segment.value > 0 && <button type="button" key={segment.label} class={segment.tone ?? "accent"} style={{ width: `${(segment.value / total) * 100}%` }} onMouseEnter={() => setActive({ row: rowIndex, segment: segmentIndex })} onFocus={() => setActive({ row: rowIndex, segment: segmentIndex })} onClick={() => setActive({ row: rowIndex, segment: segmentIndex })} aria-label={`${row.label}, ${segment.label}: ${segment.value}`} />)}</div><div class="stack-counts">{row.segments.filter((segment) => segment.value > 0).map((segment) => <span key={segment.label} class={segment.tone ?? "accent"}><strong>{segment.value.toLocaleString()}</strong><small>{segment.label}</small></span>)}</div></div>;
     })}</div>
     <div class="inline-legend">{legend.map((segment) => <span key={segment.label}><i class={segment.tone ?? "accent"} />{segment.label}</span>)}</div>
   </ChartFrame>;
@@ -360,14 +363,18 @@ function Table({
   headers,
   rows,
   searching,
+  initialSortColumn = 0,
+  initialSortDirection = "ascending",
 }: {
   label: string;
   headers: string[];
   rows: Array<{ key: string; values: ComponentChildren[]; sortValues?: unknown[] }>;
   searching: boolean;
+  initialSortColumn?: number;
+  initialSortDirection?: SortDirection;
 }) {
-  const [direction, setDirection] = useState<SortDirection>("ascending");
-  const [sortColumn, setSortColumn] = useState(0);
+  const [direction, setDirection] = useState<SortDirection>(initialSortDirection);
+  const [sortColumn, setSortColumn] = useState(initialSortColumn);
   const ordered = useMemo(() => [...rows].sort((left, right) => {
     const a = left.sortValues?.[sortColumn] ?? left.values[sortColumn];
     const b = right.sortValues?.[sortColumn] ?? right.values[sortColumn];
@@ -447,7 +454,7 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
     case "summary-visualization": return <SummaryChart section={section} />;
     case "command-failure-summary": {
       const commands = (section.commands ?? []).filter((row) => matches(row, query));
-      return <><StackedChart title="Failure rate by command" question="Which commands failed, and how much of their observed execution volume did they affect?" rows={commands.map((row) => ({ label: row.command_name, segments: [{ label: "Success", value: row.success_count, tone: "success" }, { label: "Error", value: row.error_count, tone: "error" }, { label: "Unknown", value: row.unknown_count ?? 0, tone: "unknown" }] }))} /><Table searching={Boolean(query)} label={section.title} headers={["Command", "Runs", "Success", "Errors", "Unknown", "Failure rate", "Callbacks"]} rows={commands.map((row) => ({ key: row.command_name, values: [row.command_name, row.execution_count, row.success_count, row.error_count, row.unknown_count ?? 0, percent(row.failure_rate), row.affected_callbacks ?? 0], sortValues: [row.command_name, row.execution_count, row.success_count, row.error_count, row.unknown_count ?? 0, row.failure_rate, row.affected_callbacks ?? 0] }))} />
+      return <><StackedChart title="Failure rate by command" question="Which commands failed, and how much of their observed execution volume did they affect?" rows={commands.map((row) => ({ label: row.command_name, segments: [{ label: "Success", value: row.success_count, tone: "success" }, { label: "Error", value: row.error_count, tone: "error" }, { label: "Unknown", value: row.unknown_count ?? 0, tone: "unknown" }] }))} /><Table searching={Boolean(query)} label={section.title} headers={["Command", "Runs", "Success", "Errors", "Unknown", "Failure rate", "Callbacks"]} initialSortColumn={5} initialSortDirection="descending" rows={commands.map((row) => ({ key: row.command_name, values: [row.command_name, row.execution_count, row.success_count, row.error_count, row.unknown_count ?? 0, percent(row.failure_rate), row.affected_callbacks ?? 0], sortValues: [row.command_name, row.execution_count, row.success_count, row.error_count, row.unknown_count ?? 0, row.failure_rate, row.affected_callbacks ?? 0] }))} />
         <div class="detail-list">{commands.filter((row) => row.failures?.length).map((row) => <Detail key={row.command_name} label={`${row.command_name}: ${row.failures?.length} failure detail(s)`}><ul class="event-list">{row.failures?.map((failure, index) => <li key={`${failure.task.task_id}-${index}`}><Task task={failure.task} /><span>{failure.dispatch_failed ? "Dispatch failed" : failure.status ?? "Error"}</span>{failure.output_preview?.text && <pre>{failure.output_preview.text}</pre>}{failure.output_preview?.binary && <small>Binary output withheld.</small>}</li>)}</ul></Detail>)}</div></>;
     }
     case "command-duration": {
@@ -469,7 +476,7 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
     }
     case "callback-health": {
       const callbacks = (section.callbacks ?? []).filter((row) => matches(row, query));
-      return <><StackedChart title="Completion rate by callback" question="Which callbacks show degraded completion or repeated failures?" rows={callbacks.map((row) => ({ label: `Callback ${row.callback_display_id ?? row.callback_id}`, segments: callbackStatus(row).segments }))} /><Table searching={Boolean(query)} label={section.title} headers={["Callback", "Tasks", "Success", "Errors", "Unknown", "Unclassified", "Completion", "Consecutive failures"]} rows={callbacks.map((row) => { const status = callbackStatus(row); return { key: row.callback_id, values: [row.link ? <SafeAnchor link={row.link} /> : row.callback_id, row.task_count, status.success, status.error, status.unknown, status.unclassified, percent(row.completion_rate), row.consecutive_failure_count ?? 0], sortValues: [row.callback_display_id ?? row.callback_id, row.task_count, status.success, status.error, status.unknown, status.unclassified, row.completion_rate, row.consecutive_failure_count ?? 0] }; })} />
+      return <><Table searching={Boolean(query)} label={section.title} headers={["Callback", "Tasks", "Success", "Errors", "Unknown", "Unclassified", "Completion", "Consecutive failures"]} initialSortColumn={6} initialSortDirection="ascending" rows={callbacks.map((row) => { const status = callbackStatus(row); return { key: row.callback_id, values: [row.link ? <SafeAnchor link={row.link} /> : row.callback_id, row.task_count, status.success, status.error, status.unknown, status.unclassified, percent(row.completion_rate), row.consecutive_failure_count ?? 0], sortValues: [row.callback_display_id ?? row.callback_id, row.task_count, status.success, status.error, status.unknown, status.unclassified, row.completion_rate ?? -1, row.consecutive_failure_count ?? 0] }; })} />
         <div class="detail-list">{callbacks.filter((row) => row.trailing_failures?.length || row.last_successful_task).map((row) => <Detail key={row.callback_id} label={`Callback ${row.callback_display_id ?? row.callback_id} context`}><p>{row.first_task_at ? new Date(row.first_task_at).toLocaleString() : "Unknown start"} → {row.last_task_at ? new Date(row.last_task_at).toLocaleString() : "unknown end"}</p>{row.last_successful_task && <p><strong>Last success:</strong> <Task task={row.last_successful_task} /></p>}<TaskList tasks={row.trailing_failures} empty="No trailing failures." /></Detail>)}</div></>;
     }
     case "av-tracker": {

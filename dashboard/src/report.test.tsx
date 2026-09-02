@@ -38,6 +38,9 @@ describe("report sections", () => {
     firstBucket.focus();
     fireEvent.keyDown(firstBucket, { key: "ArrowRight" });
     expect(document.activeElement?.getAttribute("aria-label")).toMatch(/4 tasks/i);
+    expect(timelineChart.querySelector(".timeline-scroll")).toBeNull();
+    expect(timelineChart.querySelector(".timeline-bars")?.getAttribute("style")).toContain("minmax(0, 1fr)");
+    expect(timelineChart.querySelector(".timeline-axis")).toBeTruthy();
   });
 
   it("replaces a redundant one-bucket dropdown with a compact activity summary", () => {
@@ -66,7 +69,7 @@ describe("report sections", () => {
       kind: "outlier-context",
       status: "available",
       outliers: [
-        { task: { task_id: "8", display_id: "88", command_name: "execute" }, duration_seconds: 90, preceding: [{ task_id: "7", command_name: "pwd" }], following: [{ task_id: "9", command_name: "ls" }], sequence_signature: "pwd -> execute -> ls" },
+        { task: { task_id: "8", display_id: "88", command_name: "execute", argument_preview: { text: "payload.bin", retention: "all" } }, duration_seconds: 90, preceding: [{ task_id: "7", command_name: "pwd" }], following: [{ task_id: "9", command_name: "ls" }], sequence_signature: "pwd -> execute -> ls" },
         { task: { task_id: "10", display_id: "100", command_name: "upload" }, duration_seconds: 30, preceding: [], following: [], sequence_signature: "upload" },
       ],
     } as ReportSection;
@@ -75,6 +78,7 @@ describe("report sections", () => {
     fireEvent.click(screen.getByText("Outlier Context").closest("summary")!);
     const explorer = screen.getByText(/Neighboring commands provide investigation context/i).closest<HTMLElement>(".outlier-explorer")!;
     expect(within(explorer).getByRole("group", { name: "Command context for task 88" })).toBeTruthy();
+    expect(within(explorer).getAllByText("execute payload.bin").length).toBeGreaterThanOrEqual(1);
     expect(within(explorer).getByText("pwd -> execute -> ls")).toBeTruthy();
     expect(explorer.querySelectorAll(".context-step")).toHaveLength(3);
 
@@ -84,22 +88,44 @@ describe("report sections", () => {
     expect(screen.queryByRole("figure", { name: "Outlier duration by task" })).toBeNull();
   });
 
+  it("renders compact stacked bars with external count labels", () => {
+    const section = {
+      id: "failures",
+      title: "Command failures",
+      kind: "command-failure-summary",
+      status: "available",
+      commands: [{ command_name: "cat", execution_count: 24, success_count: 21, error_count: 3, failure_rate: 0.125 }],
+    } as ReportSection;
+
+    const view = render(<SectionPanel section={section} query="" />);
+    fireEvent.click(screen.getByText("Command failures").closest("summary")!);
+    const chart = screen.getByRole("figure", { name: "Failure rate by command" });
+    expect(chart.querySelector(".stack-track button span")).toBeNull();
+    expect(chart.querySelector(".stack-counts strong")?.textContent).toBe("21");
+  });
+
   it("renders a structured command table rather than raw model JSON", () => {
     const section = {
       id: "failures",
       title: "Command failures",
       kind: "command-failure-summary",
       status: "available",
-      commands: [{ command_name: "shell", execution_count: 4, success_count: 2, error_count: 2, failure_rate: 0.5 }],
+      commands: [
+        { command_name: "shell", execution_count: 4, success_count: 2, error_count: 2, failure_rate: 0.5 },
+        { command_name: "cat", execution_count: 24, success_count: 21, error_count: 3, failure_rate: 0.125 },
+      ],
     } as ReportSection;
 
-    render(<SectionPanel section={section} query="" />);
+    const view = render(<SectionPanel section={section} query="" />);
     fireEvent.click(screen.getByText("Command failures").closest("summary")!);
 
     const table = screen.getByRole("table", { name: "Command failures" });
     expect(within(table).getByText("shell")).toBeTruthy();
     expect(screen.getByRole("figure", { name: "Failure rate by command" })).toBeTruthy();
     expect(document.body.textContent).not.toContain('"command_name"');
+    const rows = [...view.container.querySelectorAll("tbody tr")];
+    expect(rows.map((row) => row.firstElementChild?.textContent)).toEqual(["shell", "cat"]);
+    expect(within(table).getByRole("button", { name: /Failure rate ↓/i })).toBeTruthy();
   });
 
   it("uses a compact fact instead of an axis for a one-result ranking", () => {
@@ -125,16 +151,22 @@ describe("report sections", () => {
       title: "Callback Health",
       kind: "callback-health",
       status: "available",
-      callbacks: [{ callback_id: "7", task_count: 6, success_count: 0, error_count: 0, unknown_count: 0 }],
+      callbacks: [
+        { callback_id: "7", task_count: 6, success_count: 0, error_count: 0, unknown_count: 0 },
+        { callback_id: "9", callback_display_id: "9", task_count: 12, success_count: 10, error_count: 2, completion_rate: 0.833, consecutive_failure_count: 3 },
+      ],
     } as ReportSection;
 
-    render(<SectionPanel section={section} query="" />);
+    const view = render(<SectionPanel section={section} query="" />);
     fireEvent.click(screen.getByText("Callback Health").closest("summary")!);
-    const chart = screen.getByRole("figure", { name: "Completion rate by callback" });
-    expect(within(chart).getByRole("button", { name: /Callback 7, Unclassified: 6/i })).toBeTruthy();
-    expect(within(chart).getByText("Unclassified")).toBeTruthy();
+    expect(screen.queryByRole("figure", { name: "Completion rate by callback" })).toBeNull();
+    expect(screen.queryByLabelText("Callbacks needing attention")).toBeNull();
     const table = screen.getByRole("table", { name: "Callback Health" });
     expect(within(table).getByRole("button", { name: "Unclassified" })).toBeTruthy();
+    expect(within(table).getByRole("button", { name: /Completion ↑/i })).toBeTruthy();
+    const rows = [...view.container.querySelectorAll("tbody tr")];
+    expect(rows[0]?.textContent).toMatch(/7/);
+    expect(rows[1]?.textContent).toMatch(/9/);
   });
 
   it("shows concrete tool invocations instead of repeating tool-group totals", () => {

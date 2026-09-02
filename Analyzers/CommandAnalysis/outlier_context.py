@@ -12,6 +12,7 @@ from Core.analyzer_command_grouping import analyzer_command_group
 from Core.event_utils import duration_from_task_result
 from Core.event_utils import group_tasks_by_operation_sorted, index_tasks_by_key
 from Core.event_utils import task_key as _task_key
+from Core.output_rule import copy_task_retention_fields
 
 from Analyzers.CommandAnalysis.command_duration import (
     analyze as command_duration_analyze,
@@ -45,6 +46,8 @@ def analyze(task_events: list[dict], result_events: list[dict], context: dict | 
                 "display_id": evt.get("display_id", 0),
                 "command_name": command_name,
                 "duration_seconds": evt["duration_seconds"],
+                "arguments_raw": evt.get("arguments_raw", ""),
+                **copy_task_retention_fields(evt),
             }
             if evt.get("pty_shell_command"):
                 row["pty_shell_command"] = evt["pty_shell_command"]
@@ -80,9 +83,11 @@ def analyze(task_events: list[dict], result_events: list[dict], context: dict | 
             "display_id": outlier.get("display_id", 0),
             "command_name": outlier["command_name"],
             "duration_seconds": outlier["duration_seconds"],
+            "arguments_raw": outlier.get("arguments_raw", ""),
             "preceding_context": preceding_context,
             "following_context": following_context,
             "sequence_signature": sequence_signature,
+            **{k: v for k, v in outlier.items() if k.startswith("arguments_") or k.startswith("retention_")},
         }
         if outlier.get("pty_shell_command"):
             enr["pty_shell_command"] = outlier["pty_shell_command"]
@@ -166,6 +171,8 @@ def _extract_context(
             "display_id": t.get("display_id", 0),
             "command_name": analyzer_command_group(t),
             "duration_seconds": duration,
+            "arguments_raw": t.get("arguments_raw", ""),
+            **copy_task_retention_fields(t),
         }
         if t.get("pty_synthetic"):
             ctx["pty_shell_command"] = t.get("command_name", "")

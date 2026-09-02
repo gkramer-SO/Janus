@@ -101,7 +101,7 @@ export function App() {
     }
   }
   if (boot.state === "loading") return <main><p class="state">Loading Janus report…</p></main>;
-  if (boot.state === "error") return <main><h1>Janus</h1><p class="error">{boot.message}</p></main>;
+  if (boot.state === "error") return <main><h1>Janus</h1><p class="state">{boot.message}</p></main>;
   const { model, mode } = boot;
   const status = model.summary.status_distribution ?? {};
   return <main>

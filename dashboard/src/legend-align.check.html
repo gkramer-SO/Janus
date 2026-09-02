@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Legend alignment check</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    body { padding: 2rem; }
+    .preview { display: grid; gap: 2rem; max-width: 42rem; }
+    .preview h2 { margin: 0; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <div class="preview">
+    <section>
+      <h2>Inline legend</h2>
+      <figure class="data-chart">
+        <div class="inline-legend" style="margin-left: 0">
+          <span><i class="success"></i>Success</span>
+          <span><i class="error"></i>Error</span>
+          <span><i class="unknown"></i>Unknown</span>
+        </div>
+      </figure>
+    </section>
+    <section>
+      <h2>Chart legend</h2>
+      <div class="chart-legend">
+        <button type="button"><i class="success"></i><span>Success</span><strong>2</strong></button>
+        <button type="button"><i class="error"></i><span>Error</span><strong>1</strong></button>
+        <button type="button"><i class="unknown"></i><span>Unknown</span><strong>1</strong></button>
+      </div>
+    </section>
+    <section>
+      <h2>Stacked track</h2>
+      <div class="stack-track" style="width: 22rem">
+        <button class="success" type="button" style="width: 40%">2</button>
+        <button class="error" type="button" style="width: 40%">2</button>
+        <button class="unknown" type="button" style="width: 20%">1</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
