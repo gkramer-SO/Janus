@@ -2854,9 +2854,9 @@ def _render_dwell_time(data: dict, mythic_base_url: str = "") -> str:
     </div>
     """
 
-    outliers = stats.get("outlier_events", [])
+    outliers = data.get("measurements") or stats.get("outlier_events", [])
     if not outliers:
-        return _collapsible_section("Dwell Time", f"{summary_html}<p>No dwell-time outliers detected.</p>")
+        return _collapsible_section("Dwell Time", f"{summary_html}<p>No dwell-time measurements available.</p>")
 
     rows = []
     for outlier in outliers:

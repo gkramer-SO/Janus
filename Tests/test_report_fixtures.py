@@ -8,6 +8,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+from Core.analyzer_registry import ALL_ANALYZERS
 from Core.report_model import ReportModel
 
 
@@ -58,21 +59,7 @@ def test_fixture_validates_with_checked_in_json_schema(path: Path, document: dic
 def test_complete_fixture_covers_every_non_diff_section_kind() -> None:
     document = json.loads((FIXTURES / "complete-mythic.json").read_text(encoding="utf-8"))
     kinds = {section["kind"] for section in document["sections"]}
-    assert kinds == {
-        "summary-visualization",
-        "command-failure-summary",
-        "command-retry-success",
-        "command-duration",
-        "friction-score",
-        "outlier-context",
-        "callback-health",
-        "av-tracker",
-        "dwell-time",
-        "parameter-entropy",
-        "argument-position-profile",
-        "tool-dump",
-        "data-quality",
-    }
+    assert kinds == {*ALL_ANALYZERS, "data-quality"}
 
 
 def test_high_unknown_fixture_suppresses_failure_driven_sections() -> None:

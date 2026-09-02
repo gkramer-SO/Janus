@@ -1366,6 +1366,38 @@
       "title": "DiffSummary",
       "type": "object"
     },
+    "DwellDistributionBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "max_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "min_seconds": {
+          "minimum": 0,
+          "title": "Min Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "min_seconds",
+        "max_seconds"
+      ],
+      "title": "DwellDistributionBucket",
+      "type": "object"
+    },
     "DwellRow": {
       "additionalProperties": false,
       "properties": {
@@ -1403,6 +1435,13 @@
           ],
           "default": null
         },
+        "distribution": {
+          "items": {
+            "$ref": "#/$defs/DwellDistributionBucket"
+          },
+          "title": "Distribution",
+          "type": "array"
+        },
         "id": {
           "minLength": 1,
           "pattern": "^[A-Za-z0-9._:-]+$",
@@ -1426,6 +1465,12 @@
           ],
           "default": null,
           "title": "Max Seconds"
+        },
+        "measurement_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Measurement Count",
+          "type": "integer"
         },
         "measurements": {
           "items": {

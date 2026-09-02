@@ -1,0 +1,7 @@
+interface:
+  display_name: "Janus Operator Dashboard Ux"
+  short_description: "High-signal Janus operator report UX"
+  default_prompt: "Use $janus-operator-dashboard-ux to rework this Janus report view for fast, trustworthy operator decisions."
+
+policy:
+  allow_implicit_invocation: true

@@ -46,9 +46,11 @@ export interface DiffMetadata { "baseline_run_id": string; "candidate_run_id": s
 
 export interface DiffSummary { "likely_regressions"?: number; "likely_improvements"?: number; "low_confidence_changes"?: number; "not_comparable"?: number }
 
+export interface DwellDistributionBucket { "label": string; "min_seconds": number; "max_seconds": number; "count"?: number }
+
 export interface DwellRow { "from_task": TaskRef; "to_task": TaskRef; "dwell_seconds": number }
 
-export interface DwellTimeSection { "id": string; "title": string; "status": SectionStatus; "status_reason"?: string | null; "warnings"?: Array<ReportWarning>; "sources"?: Array<SourceKind>; "confidence"?: ConfidenceLevel | null; "kind": "dwell-time"; "measurements"?: Array<DwellRow>; "median_seconds"?: number | null; "p95_seconds"?: number | null; "max_seconds"?: number | null }
+export interface DwellTimeSection { "id": string; "title": string; "status": SectionStatus; "status_reason"?: string | null; "warnings"?: Array<ReportWarning>; "sources"?: Array<SourceKind>; "confidence"?: ConfidenceLevel | null; "kind": "dwell-time"; "measurements"?: Array<DwellRow>; "distribution"?: Array<DwellDistributionBucket>; "measurement_count"?: number; "median_seconds"?: number | null; "p95_seconds"?: number | null; "max_seconds"?: number | null }
 
 export interface EntropyFinding { "task": TaskRef; "finding_type": string; "token_entropy"?: number | null; "detail": string }
 

@@ -424,6 +424,13 @@ class DwellRow(StrictModel):
     dwell_seconds: float = Field(ge=0)
 
 
+class DwellDistributionBucket(StrictModel):
+    label: str
+    min_seconds: float = Field(ge=0)
+    max_seconds: float = Field(gt=0)
+    count: int = Field(default=0, ge=0)
+
+
 class EntropyFinding(StrictModel):
     task: TaskRef
     finding_type: str
@@ -525,6 +532,8 @@ class AvTrackerSection(SectionBase):
 class DwellTimeSection(SectionBase):
     kind: Literal["dwell-time"]
     measurements: list[DwellRow] = Field(default_factory=list)
+    distribution: list[DwellDistributionBucket] = Field(default_factory=list)
+    measurement_count: int = Field(default=0, ge=0)
     median_seconds: float | None = Field(default=None, ge=0)
     p95_seconds: float | None = Field(default=None, ge=0)
     max_seconds: float | None = Field(default=None, ge=0)

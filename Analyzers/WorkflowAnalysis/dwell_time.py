@@ -92,7 +92,40 @@ def analyze(task_events: list[dict], result_events: list[dict]) -> dict:
             "max_threshold_seconds": 14400.0,
         },
         "global_statistics": statistics_result,
+        "measurements": [
+            {**row, "dwell_seconds": round(row["dwell_seconds"], 2)}
+            for row in sorted(dwells, key=lambda value: value["dwell_seconds"], reverse=True)
+        ],
+        "distribution": _build_distribution(dwells),
     }
+
+
+_DWELL_BUCKETS = (
+    ("1–5s", 1.0, 5.0),
+    ("5–15s", 5.0, 15.0),
+    ("15–30s", 15.0, 30.0),
+    ("30–60s", 30.0, 60.0),
+    ("1–2m", 60.0, 120.0),
+    ("2–5m", 120.0, 300.0),
+    ("5–15m", 300.0, 900.0),
+    ("15–30m", 900.0, 1800.0),
+    ("30–60m", 1800.0, 3600.0),
+    ("1–4h", 3600.0, 14400.0),
+)
+
+
+def _build_distribution(dwells: list[dict]) -> list[dict]:
+    """Bucket observed gaps into stable, operator-readable time ranges."""
+    values = [row["dwell_seconds"] for row in dwells]
+    return [
+        {
+            "label": label,
+            "min_seconds": minimum,
+            "max_seconds": maximum,
+            "count": sum(minimum <= value < maximum for value in values),
+        }
+        for label, minimum, maximum in _DWELL_BUCKETS
+    ]
 
 def _compute_statistics(dwells: list[dict]) -> dict:
     """Compute statistical summary for dwell times.
