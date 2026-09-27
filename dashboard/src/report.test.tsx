@@ -435,13 +435,15 @@ describe("report sections", () => {
       }],
     } as ReportSection;
 
-    render(<SectionPanel section={section} query="" />);
+    const view = render(<SectionPanel section={section} query="" />);
     fireEvent.click(screen.getByText("Command Retry Success").closest("summary")!);
-    fireEvent.click(screen.getByText(/execute-assembly: attempt context/i));
+    expect(view.container.querySelector(".retry-panel")).toBeTruthy();
+    expect(screen.queryByRole("figure", { name: "Retry attempts by command" })).toBeNull();
     expect(screen.getByText("Task 100")).toBeTruthy();
     expect(screen.getByText("Task 101")).toBeTruthy();
     expect(screen.getByText(/execute-assembly Seatbelt\.exe -group=user/i)).toBeTruthy();
     expect(screen.getByText(/execute-assembly Seatbelt\.exe -group=all/i)).toBeTruthy();
+    expect(within(view.container.querySelector(".retry-stats") as HTMLElement).getByText("Recovered")).toBeTruthy();
   });
 
   it("distinguishes empty analyzer output from an empty search result", () => {
@@ -497,5 +499,31 @@ describe("report sections", () => {
     fireEvent.click(within(screen.getByRole("table", { name: "Command duration" })).getByRole("button", { name: /median/i }));
     const rows = [...view.container.querySelectorAll("tbody tr")];
     expect(rows.map((row) => row.firstElementChild?.textContent)).toEqual(["fast", "slow"]);
+  });
+
+  it("labels range-plot marks on hover so median and P95 are readable", () => {
+    const section = {
+      id: "durations",
+      title: "Command Duration",
+      kind: "command-duration",
+      status: "available",
+      commands: [
+        { command_name: "execute-assembly", execution_count: 4, min_seconds: 0, median_seconds: 2.5, p95_seconds: 4.1, max_seconds: 4.3 },
+      ],
+    } as ReportSection;
+
+    render(<SectionPanel section={section} query="" />);
+    fireEvent.click(screen.getByText("Command Duration").closest("summary")!);
+    const chart = screen.getByRole("figure", { name: "Command duration distribution" });
+    expect(chart.querySelector(".plot-scale-max")?.textContent).toMatch(/4\.3s\s*scale max/i);
+    expect(chart.querySelector(".range-p95-value")?.textContent).toMatch(/4\.1s\s*P95/i);
+    const p95 = within(chart).getByRole("button", { name: /execute-assembly P95 4\.1s/i });
+    fireEvent.mouseEnter(p95);
+    expect(chart.querySelector(".chart-readout")?.textContent).toMatch(/4\.1s P95/i);
+    expect(within(p95).getByText(/P95 · 4\.1s/i)).toBeTruthy();
+    const median = within(chart).getByRole("button", { name: /execute-assembly median 2\.5s/i });
+    fireEvent.mouseEnter(median);
+    expect(chart.querySelector(".chart-readout")?.textContent).toMatch(/2\.5s median/i);
+    expect(within(chart).getByRole("button", { name: /min–max range 0\.0s to 4\.3s/i })).toBeTruthy();
   });
 });

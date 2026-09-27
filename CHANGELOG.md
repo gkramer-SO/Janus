@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Outlier context**: Duration outliers use a ranked table with sequence signatures and preceding/following command lists instead of the stepwise inspector.
 - **Dwell distribution**: The dwell chart surfaces measured count, median, P95, and maximum beside the pause histogram.
 - **Argument position profile**: The dashboard section now mirrors the portable report with a summary strip, a Type / Command / Position / Detail findings table with readable details, per-command slot tables (reach, unique values, top values), and a depth table with median and stdev. The mixed-ratio dot plot was removed. Report model `1.2.0` adds the optional fields that feed this view.
+- **Command retry success**: Retry sequences render as one panel with a summary strip, outcome-colored table, and inline attempt chain (full invocations) instead of a one-result chart plus a separate context disclosure.
 - **Retry attempt labels**: Retry sequences prefer the grouped command name (including PTY in-session shell lines) when attempt rows omit a command name.
 - **Report fixtures**: Generated fixtures and adapters include `argument_preview` so demos and parity tests match retained production commands.
 

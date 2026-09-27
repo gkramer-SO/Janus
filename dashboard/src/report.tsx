@@ -372,6 +372,67 @@ function OutlierContextList({ tasks, empty }: { tasks: TaskRef[]; empty: string 
   return <ol class="outlier-context-list">{tasks.map((task, index) => <li key={`${task.task_id}-${index}`}><ToolInvocation task={task} /><Task task={task} /></li>)}</ol>;
 }
 
+function RetryAttemptChain({ tasks }: { tasks: TaskRef[] }) {
+  if (!tasks.length) return <span>—</span>;
+  return <ol class="retry-attempts">
+    {tasks.map((task, index) => <li key={`${task.task_id}-${index}`}>
+      <span class="retry-attempt-index">{index + 1}</span>
+      <div class="retry-attempt-body"><ToolInvocation task={task} /><Task task={task} /></div>
+    </li>)}
+  </ol>;
+}
+
+function RetryPanel({ section, query }: { section: Extract<ReportSection, { kind: "command-retry-success" }>; query: string }) {
+  const sequences = (section.sequences ?? []).filter((row) => matches(row, query));
+  if (!sequences.length) {
+    return <Empty>{query ? "No retry sequences match the active filter." : "No retry patterns detected."}</Empty>;
+  }
+  const recovered = sequences.filter((row) => row.succeeded).length;
+  const unresolved = sequences.length - recovered;
+  const maxAttempts = Math.max(...sequences.map((row) => row.attempts));
+
+  return <div class="retry-panel">
+    <p class="retry-guidance">Sequences where the same command was retried after a failure. Outcome shows whether the final attempt recovered.</p>
+    <dl class="retry-stats">
+      <div><dt>Sequences</dt><dd>{sequences.length.toLocaleString()}</dd></div>
+      <div><dt>Recovered</dt><dd>{recovered.toLocaleString()}</dd></div>
+      <div><dt>Unresolved</dt><dd>{unresolved.toLocaleString()}</dd></div>
+      <div><dt>Max attempts</dt><dd>{maxAttempts.toLocaleString()}</dd></div>
+    </dl>
+    <Table
+      searching={Boolean(query)}
+      label={section.title}
+      headers={["Command", "Attempts", "Outcome", "Duration", "Attempt chain"]}
+      initialSortColumn={1}
+      initialSortDirection="descending"
+      rows={sequences.map((row, index) => ({
+        key: `${row.command_name}-${index}`,
+        values: [
+          <code>{row.command_name}</code>,
+          <strong class="dwell-value">{row.attempts}</strong>,
+          <>{row.succeeded ? "Recovered" : "Unresolved"}{row.final_status ? ` · ${row.final_status}` : ""}</>,
+          duration(row.duration_seconds),
+          <RetryAttemptChain tasks={row.tasks ?? []} />,
+        ],
+        sortValues: [row.command_name, row.attempts, row.succeeded ? 1 : 0, row.duration_seconds ?? -1, row.tasks?.length ?? 0],
+        cellClasses: [undefined, undefined, row.succeeded ? "status-cell success" : "status-cell error", undefined, undefined],
+      }))}
+    />
+    <div class="detail-list">{sequences.filter((row) => (row.transitions?.length ?? 0) > 0 || (row.intervening_tasks?.length ?? 0) > 0).map((row, index) => (
+      <Detail key={`${row.command_name}-context-${index}`} label={`${row.command_name}: attempt context`}>
+        {row.transitions?.length ? <section class="retry-context">
+          <h3>Argument changes</h3>
+          <ul>{row.transitions.map((transition) => <li key={`${transition.from_attempt}-${transition.to_attempt}`}>Attempt {transition.from_attempt} → {transition.to_attempt}: {(transition.changes ?? []).join(", ") || transition.note || "No recorded change"}</li>)}</ul>
+        </section> : null}
+        {row.intervening_tasks?.length ? <section class="retry-context">
+          <h3>Intervening tasks</h3>
+          <TaskList tasks={row.intervening_tasks} empty="No intervening tasks." />
+        </section> : null}
+      </Detail>
+    ))}</div>
+  </div>;
+}
+
 function OutlierExplorer({ outliers }: { outliers: OutlierRow[] }) {
   const ranked = [...outliers].sort((left, right) => right.duration_seconds - left.duration_seconds);
   if (!ranked.length) return <Empty>No duration outliers were detected.</Empty>;
@@ -466,17 +527,82 @@ function callbackStatus(row: CallbackHealthRow) {
 
 type RangeDatum = { label: string; min: number; median: number; p95: number; max: number };
 
+type RangeMark = "range" | "median" | "p95";
+
+function rangeMarkReadout(datum: RangeDatum, mark: RangeMark | null): string {
+  if (mark === "range") return `${duration(datum.min)}–${duration(datum.max)} min–max`;
+  if (mark === "median") return `${duration(datum.median)} median`;
+  if (mark === "p95") return `${duration(datum.p95)} P95`;
+  return `${duration(datum.median)} median · ${duration(datum.p95)} P95`;
+}
+
 export function RangePlot({ title, question, data }: { title: string; question: string; data: RangeDatum[] }) {
   const [active, setActive] = useState(0);
+  const [mark, setMark] = useState<RangeMark | null>(null);
   const visible = data.filter((datum) => [datum.min, datum.median, datum.p95, datum.max].every(Number.isFinite)).sort((a, b) => b.p95 - a.p95).slice(0, 8);
   const identity = visible.map((datum) => datum.label).join("|");
-  useEffect(() => setActive(0), [identity]);
+  useEffect(() => {
+    setActive(0);
+    setMark(null);
+  }, [identity]);
   if (!visible.length) return null;
   const maximum = Math.max(1, ...visible.flatMap((datum) => [datum.min, datum.median, datum.p95, datum.max]));
   const selected = visible[active] ?? visible[0];
   return <ChartFrame title={title} detail="minimum · median · P95 · maximum" question={question}>
-    <div class="chart-readout" aria-live="polite"><span>{selected.label}</span><strong>{duration(selected.median)} median · {duration(selected.p95)} P95</strong></div>
-    <div class="range-plot"><div class="plot-scale"><span>0s</span><span>{duration(maximum)}</span></div>{visible.map((datum, index) => <button type="button" class={`range-row${index === active ? " active" : ""}`} key={datum.label} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} aria-label={`${datum.label}: minimum ${duration(datum.min)}, median ${duration(datum.median)}, P95 ${duration(datum.p95)}, maximum ${duration(datum.max)}`}><span title={datum.label}>{datum.label}</span><i class="range-track" aria-hidden="true"><b style={{ left: `${(datum.min / maximum) * 100}%`, width: `${((datum.max - datum.min) / maximum) * 100}%` }} /><em class="median" style={{ left: `${(datum.median / maximum) * 100}%` }} /><em class="p95" style={{ left: `${(datum.p95 / maximum) * 100}%` }} /></i><strong>{duration(datum.p95)}</strong></button>)}</div>
+    <div class="chart-readout" aria-live="polite"><span>{selected.label}</span><strong>{rangeMarkReadout(selected, mark)}</strong></div>
+    <div class="range-plot">
+      <div class="plot-scale" aria-label={`Duration scale from 0 seconds to ${duration(maximum)}`}>
+        <span>0s</span>
+        <span class="plot-scale-max"><span>{duration(maximum)}</span><small>scale max</small></span>
+      </div>
+      {visible.map((datum, index) => {
+        const activate = () => setActive(index);
+        return <div class={`range-row${index === active ? " active" : ""}`} key={datum.label} onMouseEnter={activate}>
+          <button type="button" class="range-row-label" onFocus={activate} onClick={activate} aria-label={`${datum.label}: minimum ${duration(datum.min)}, median ${duration(datum.median)}, P95 ${duration(datum.p95)}, maximum ${duration(datum.max)}`}>
+            <span title={datum.label}>{datum.label}</span>
+          </button>
+          <div class="range-track">
+            <button
+              type="button"
+              class={`range-mark range-span${index === active && mark === "range" ? " active" : ""}`}
+              style={{ left: `${(datum.min / maximum) * 100}%`, width: `${Math.max(((datum.max - datum.min) / maximum) * 100, 0.4)}%` }}
+              onMouseEnter={() => { activate(); setMark("range"); }}
+              onMouseLeave={() => setMark(null)}
+              onFocus={() => { activate(); setMark("range"); }}
+              onBlur={() => setMark(null)}
+              aria-label={`${datum.label} min–max range ${duration(datum.min)} to ${duration(datum.max)}`}
+            >
+              <span class="range-tooltip">Min–max · {duration(datum.min)}–{duration(datum.max)}</span>
+            </button>
+            <button
+              type="button"
+              class={`range-mark median${index === active && mark === "median" ? " active" : ""}`}
+              style={{ left: `${(datum.median / maximum) * 100}%` }}
+              onMouseEnter={() => { activate(); setMark("median"); }}
+              onMouseLeave={() => setMark(null)}
+              onFocus={() => { activate(); setMark("median"); }}
+              onBlur={() => setMark(null)}
+              aria-label={`${datum.label} median ${duration(datum.median)}`}
+            >
+              <span class="range-tooltip">Median · {duration(datum.median)}</span>
+            </button>
+            <button
+              type="button"
+              class={`range-mark p95${index === active && mark === "p95" ? " active" : ""}`}
+              style={{ left: `${(datum.p95 / maximum) * 100}%` }}
+              onMouseEnter={() => { activate(); setMark("p95"); }}
+              onMouseLeave={() => setMark(null)}
+              onFocus={() => { activate(); setMark("p95"); }}
+              onBlur={() => setMark(null)}
+              aria-label={`${datum.label} P95 ${duration(datum.p95)}`}
+            >
+              <span class="range-tooltip">P95 · {duration(datum.p95)}</span>
+            </button>
+          </div>
+          <strong class="range-p95-value"><span>{duration(datum.p95)}</span><small>P95</small></strong>
+        </div>;
+      })}
+    </div>
   </ChartFrame>;
 }
 
@@ -756,11 +882,8 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
           {row.slowest_task && <p><strong>Slowest:</strong> <Task task={row.slowest_task} /></p>}<TaskList tasks={row.outlier_tasks} empty="No outlier tasks." />
         </Detail>)}</div></>;
     }
-    case "command-retry-success": {
-      const sequences = (section.sequences ?? []).filter((row) => matches(row, query));
-      return <><DotPlot title="Retry attempts by command" question="Which command sequences required the most attempts, and did they recover?" data={sequences.map((row) => ({ label: `${row.command_name} · ${row.succeeded ? "recovered" : "unresolved"}`, value: row.attempts, displayValue: `${row.attempts} attempt${row.attempts === 1 ? "" : "s"}` }))} /><Table searching={Boolean(query)} label={section.title} headers={["Command", "Attempts", "Outcome", "Final status", "Duration"]} rows={sequences.map((row, index) => ({ key: `${row.command_name}-${index}`, values: [row.command_name, row.attempts, row.succeeded ? "Recovered" : "Unresolved", text(row.final_status), duration(row.duration_seconds)], sortValues: [row.command_name, row.attempts, row.succeeded ? 1 : 0, row.final_status, row.duration_seconds] }))} />
-        <div class="detail-list">{sequences.filter((row) => row.tasks?.length || row.transitions?.length || row.intervening_tasks?.length).map((row, index) => <Detail key={`${row.command_name}-${index}`} label={`${row.command_name}: attempt context`}>{row.tasks?.length ? <><h3>Attempts</h3><TaskList tasks={row.tasks} empty="No attempt task references." /></> : null}{row.transitions?.length ? <><h3>Argument changes</h3><ul>{row.transitions.map((transition) => <li key={`${transition.from_attempt}-${transition.to_attempt}`}>Attempt {transition.from_attempt} → {transition.to_attempt}: {(transition.changes ?? []).join(", ") || transition.note || "No recorded change"}</li>)}</ul></> : null}{row.intervening_tasks?.length ? <><h3>Intervening tasks</h3><TaskList tasks={row.intervening_tasks} empty="No intervening tasks." /></> : null}</Detail>)}</div></>;
-    }
+    case "command-retry-success":
+      return <RetryPanel section={section} query={query} />;
     case "friction-score": {
       const candidates = (section.candidates ?? []).filter((row) => matches(row, query));
       if (!candidates.length) return <Empty>No friction candidates match the active filter.</Empty>;

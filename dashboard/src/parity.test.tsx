@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { afterEach, describe, expect, it } from "vitest";
 
 import completeFixture from "../../Tests/fixtures/reports/complete-mythic.json";
@@ -42,12 +42,14 @@ describe("report migration parity", () => {
     for (const title of ["Summary Analysis", "Command Failure Summary", "Command Retry Success", "Command Duration", "Top Friction Candidates", "Outlier Context", "Callback Health", "AV Tracker", "Dwell Time", "Parameter Entropy", "Argument Position Profile", "Tool Dump", "Data Quality"]) {
       expect(screen.getByText(title)).toBeTruthy();
     }
-    expect(screen.getByText(/attempt context/i)).toBeTruthy();
+    const retryPanel = view.container.querySelector(".retry-panel");
+    expect(retryPanel).toBeTruthy();
+    expect(within(retryPanel as HTMLElement).getAllByText(/execute-assembly Rubeus\.exe triage/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText(/command context for task 101/i)).toBeTruthy();
     expect(view.container.querySelector(".artifact-note")?.textContent).toMatch(/Exports:.*tool-dump\/assembly-tools.ndjson/i);
     expect(screen.queryByText(/0 repeated high-entropy token/i)).toBeNull();
     expect(screen.queryByText(/matched tasks/i)).toBeNull();
-    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(8);
+    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(7);
     expect(screen.getByRole("table", { name: "execute-assembly argument positions" })).toBeTruthy();
     for (const chart of view.container.querySelectorAll("figure.data-chart")) {
       expect(chart.querySelector(".chart-question")?.textContent?.trim()).toBeTruthy();
