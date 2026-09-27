@@ -88,9 +88,9 @@ type ChartDatum = { label: string; value: number; displayValue?: string };
 
 type ChartSegment = ChartDatum & { tone?: "success" | "error" | "unknown" | "accent" };
 
-function ChartFrame({ title, detail, question, children }: { title: string; detail: string; question?: string; children: ComponentChildren }) {
+function ChartFrame({ title, detail, question, children }: { title: string; detail?: string; question?: string; children: ComponentChildren }) {
   return <figure class="data-chart" aria-label={title}>
-    <figcaption><span>{title}</span><small>{detail}</small></figcaption>
+    <figcaption><span>{title}</span>{detail ? <small>{detail}</small> : null}</figcaption>
     {question && <p class="chart-question">{question}</p>}
     {children}
   </figure>;
@@ -346,7 +346,7 @@ export function TimelineChart({ title, question, data }: { title: string; questi
 }
 
 function SingleBucketActivity({ bucket, spanSeconds }: { bucket: ChartDatum; spanSeconds: number | null | undefined }) {
-  return <ChartFrame title="Command Volume" detail="Only observed activity interval" question="When was task activity concentrated?">
+  return <ChartFrame title="Command Volume" question="When was task activity concentrated?">
     <div class="single-activity">
       <strong>{bucket.value.toLocaleString()}<span>task{bucket.value === 1 ? "" : "s"}</span></strong>
       <div><span>Bucket started</span><time dateTime={bucket.label}>{new Date(bucket.label).toLocaleString()}</time></div>
@@ -484,6 +484,70 @@ function OutlierExplorer({ outliers }: { outliers: OutlierRow[] }) {
   </div>;
 }
 
+function frictionSignalLabel(name: string): string {
+  return name.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function FrictionPanel({ section, query }: { section: Extract<ReportSection, { kind: "friction-score" }>; query: string }) {
+  const candidates = [...(section.candidates ?? []).filter((row) => matches(row, query))].sort((left, right) => right.score - left.score);
+  if (!candidates.length) return <Empty>{query ? "No friction candidates match the active filter." : "No friction candidates were reported."}</Empty>;
+
+  return <div class="friction-panel">
+    <p class="friction-guidance">Commands ranked by combined failure, retry, duration, and anomaly signals. Higher scores deserve investigation first.</p>
+    <Table
+      searching={Boolean(query)}
+      label={section.title}
+      headers={["Command", "Score", "Action", "Samples", "Confidence"]}
+      initialSortColumn={1}
+      initialSortDirection="descending"
+      rows={candidates.map((row) => ({
+        key: row.command_name,
+        values: [
+          <code>{row.command_name}</code>,
+          <strong class="dwell-value">{row.score.toFixed(1)}</strong>,
+          row.recommended_action,
+          row.sample_size,
+          <>{row.confidence}{row.suppressed ? " · suppressed" : ""}</>,
+        ],
+        sortValues: [row.command_name, row.score, row.recommended_action, row.sample_size, row.confidence],
+      }))}
+    />
+    <div class="detail-list">{candidates.filter((row) => Object.keys(row.components ?? {}).length > 0 || (row.drivers?.length ?? 0) > 0 || (row.confidence_reasons?.length ?? 0) > 0 || (row.limitations?.length ?? 0) > 0).map((row) => {
+      const components = Object.entries(row.components ?? {}).sort((left, right) => right[1] - left[1]);
+      const drivers = [...(row.drivers ?? [])].sort((left, right) => right.impact - left.impact);
+      return <Detail key={`${row.command_name}-evidence`} label={`${row.command_name}: score evidence`}>
+        <div class="friction-evidence">
+          {components.length > 0 && <Table
+            searching={false}
+            label={`${row.command_name} score components`}
+            headers={["Signal", "Value"]}
+            initialSortColumn={1}
+            initialSortDirection="descending"
+            rows={components.map(([name, value]) => ({
+              key: name,
+              values: [frictionSignalLabel(name), <strong class="dwell-value">{text(value)}</strong>],
+              sortValues: [name, value],
+            }))}
+          />}
+          {drivers.length > 0 && <Table
+            searching={false}
+            label={`${row.command_name} score drivers`}
+            headers={["Driver", "Value", "Impact"]}
+            initialSortColumn={2}
+            initialSortDirection="descending"
+            rows={drivers.map((driver) => ({
+              key: driver.component,
+              values: [driver.label || frictionSignalLabel(driver.component), text(driver.value), <strong class="dwell-value">{text(driver.impact)}</strong>],
+              sortValues: [driver.label || driver.component, driver.value, driver.impact],
+            }))}
+          />}
+          {[...(row.confidence_reasons ?? []), ...(row.limitations ?? [])].map((reason) => <p class="friction-note" key={reason}>{reason}</p>)}
+        </div>
+      </Detail>;
+    })}</div>
+  </div>;
+}
+
 type StackedRow = { label: string; segments: ChartSegment[] };
 
 export function StackedChart({ title, question, rows }: { title: string; question: string; rows: StackedRow[] }) {
@@ -496,7 +560,7 @@ export function StackedChart({ title, question, rows }: { title: string; questio
   const selectedRow = visible[active.row] ?? visible[0];
   const selectedSegment = selectedRow.segments[active.segment] ?? selectedRow.segments[0];
   const selectedTotal = selectedRow.segments.reduce((sum, segment) => sum + segment.value, 0);
-  return <ChartFrame title={title} detail="composition, not just rank" question={question}>
+  return <ChartFrame title={title} question={question}>
     <div class="chart-readout" aria-live="polite"><span>{selectedRow.label} · {selectedSegment.label}</span><strong>{selectedSegment.value.toLocaleString()} · {selectedTotal ? ((selectedSegment.value / selectedTotal) * 100).toFixed(1) : "0.0"}%</strong></div>
     <div class="stacked-chart">{visible.map((row, rowIndex) => {
       const total = row.segments.reduce((sum, segment) => sum + segment.value, 0);
@@ -884,11 +948,8 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
     }
     case "command-retry-success":
       return <RetryPanel section={section} query={query} />;
-    case "friction-score": {
-      const candidates = (section.candidates ?? []).filter((row) => matches(row, query));
-      if (!candidates.length) return <Empty>No friction candidates match the active filter.</Empty>;
-      return <><DotPlot title="Friction score by command" question="Which commands impose the most operator friction and deserve investigation first?" data={candidates.map((row) => ({ label: `${row.command_name} · ${row.sample_size} samples`, value: row.score, displayValue: row.score.toFixed(1) }))} /><div class="card-grid">{candidates.map((row) => <article class="finding-card" key={row.command_name} data-search-match={query ? "true" : undefined} tabIndex={query ? -1 : undefined}><h3>{row.command_name}</h3><strong>{row.score.toFixed(1)}</strong><p>{row.recommended_action}</p><small>{row.sample_size} samples · {row.confidence} confidence{row.suppressed ? " · action suppressed" : ""}</small><Detail label="Score evidence"><dl>{Object.entries(row.components ?? {}).map(([name, value]) => <><dt key={`${name}-label`}>{name}</dt><dd key={name}>{text(value)}</dd></>)}</dl>{row.drivers?.length ? <ul>{row.drivers.map((driver) => <li key={driver.component}><strong>{driver.label}:</strong> {text(driver.value)} ({text(driver.impact)} impact)</li>)}</ul> : <Empty>No score drivers.</Empty>}{[...(row.confidence_reasons ?? []), ...(row.limitations ?? [])].map((reason) => <p key={reason}>{reason}</p>)}</Detail></article>)}</div></>;
-    }
+    case "friction-score":
+      return <FrictionPanel section={section} query={query} />;
     case "callback-health":
       return <CallbackHealthPanel section={section} query={query} />;
     case "av-tracker": {

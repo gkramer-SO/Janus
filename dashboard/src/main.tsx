@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { loadReportModel, type ReadyBootState } from "./boot";
-import { SafeAnchor, SectionPanel } from "./report";
+import { SectionPanel } from "./report";
 
 type BootState =
   | { state: "loading" }
@@ -118,15 +118,23 @@ export function App() {
       <Metric label="Success" value={status.success ?? 0} />
       <Metric label="Errors" value={status.error ?? 0} />
       <Metric label="Unknown" value={status.unknown ?? 0} />
+      <Metric label="Operations" value={model.run.operations?.length || model.summary.operation_count || 1} />
+      <Metric label="Callbacks" value={model.summary.callback_count ?? "—"} />
+      <Metric label="Span" value={model.summary.span_seconds !== null && model.summary.span_seconds !== undefined ? `${(model.summary.span_seconds / 3600).toFixed(1)}h` : "—"} />
     </section>
-    <section class="overview-grid" aria-label="Report overview">
-      <article class="overview-card"><h2>Run</h2><dl>
-        <dt>Kind</dt><dd>{model.run.run_kind}</dd><dt>Completed</dt><dd>{new Date(model.run.analysis_completed_at).toLocaleString()}</dd>
-        <dt>Operations</dt><dd>{model.run.operations?.length || model.summary.operation_count || 1}</dd><dt>Callbacks</dt><dd>{model.summary.callback_count ?? "—"}</dd>
-        {model.summary.span_seconds !== null && model.summary.span_seconds !== undefined && <><dt>Observed span</dt><dd>{(model.summary.span_seconds / 3600).toFixed(1)}h</dd></>}
-      </dl>{model.run.operations && model.run.operations.length > 1 && <ul>{model.run.operations.map((operation) => <li key={operation.operation_id ?? operation.operation_name}>{operation.operation_name}: {operation.task_count ?? 0} tasks, {operation.result_count ?? 0} results</li>)}</ul>}</article>
-      <article class="overview-card"><h2>Sources</h2><ul>{model.sources.map((source, index) => <li key={`${source.kind}-${index}`}><strong>{source.kind}</strong>{source.subtype ? ` · ${source.subtype}` : ""}{source.endpoint_label ? ` · ${source.endpoint_label}` : ""}{source.parser_version ? ` · parser ${source.parser_version}` : ""}</li>)}</ul></article>
-      <article class="overview-card"><h2>Retention</h2><dl><dt>Arguments</dt><dd>{model.retention.arguments ?? "unknown"}</dd><dt>Output</dt><dd>{model.retention.output ?? "unknown"}</dd></dl>{model.retention.limitations?.length ? <ul>{model.retention.limitations.map((value) => <li key={value}>{value}</li>)}</ul> : <p>No retention limitations reported.</p>}</article>
+    <section class="overview" aria-label="Report overview">
+      <div class="overview-lines">
+        <p>
+          <span>Sources</span>
+          {model.sources.map((source, index) => <span class="overview-source" key={`${source.kind}-${index}`}>{index > 0 && " · "}<strong>{source.kind}</strong>{source.subtype ? ` · ${source.subtype}` : ""}{source.endpoint_label ? ` · ${source.endpoint_label}` : ""}{source.parser_version ? ` · parser ${source.parser_version}` : ""}</span>)}
+        </p>
+        <p>
+          <span>Retention</span>
+          arguments {model.retention.arguments ?? "unknown"} · output {model.retention.output ?? "unknown"}
+          {(model.retention.limitations?.length ?? 0) > 0 ? ` · ${model.retention.limitations?.join(" · ")}` : ""}
+        </p>
+      </div>
+      {model.run.operations && model.run.operations.length > 1 && <ul class="overview-operations">{model.run.operations.map((operation) => <li key={operation.operation_id ?? operation.operation_name}>{operation.operation_name}: {operation.task_count ?? 0} tasks, {operation.result_count ?? 0} results</li>)}</ul>}
     </section>
     {mode === "served" && boot.runs.length > 1 && <label class="run-selector">Run
       <select value={model.run_id} onChange={(event) => void selectRun((event.target as HTMLSelectElement).value)}>
@@ -134,9 +142,8 @@ export function App() {
       </select>
     </label>}
     {lastUpdated && <p class="last-updated">Dashboard refreshed {new Date(lastUpdated).toLocaleTimeString()}</p>}
-    {((model.previous_runs?.length ?? 0) > 0 || (model.warnings?.length ?? 0) > 0) && <section class="run-notices" aria-label="Run notices">
-      {model.previous_runs && model.previous_runs.length > 0 && <section class="previous-runs" aria-label="Previous runs"><strong>Previous run{model.previous_runs.length === 1 ? "" : "s"}</strong><ul>{model.previous_runs.map((run) => <li key={run.run_id}>{mode === "served" ? <a href={`/runs/${encodeURIComponent(run.run_id)}`}>{run.label}</a> : <SafeAnchor link={run.link} />} <time dateTime={run.generated_at}>{new Date(run.generated_at).toLocaleString()}</time></li>)}</ul></section>}
-      {(model.warnings?.length ?? 0) > 0 && <section class="warnings" role="alert" aria-label="Run warnings"><i aria-hidden="true">!</i><div>{model.warnings?.map((warning) => <p key={`${warning.code}:${warning.section_id ?? "run"}`}>{warning.message}</p>)}</div></section>}
+    {(model.warnings?.length ?? 0) > 0 && <section class="run-notices" aria-label="Run notices">
+      <section class="warnings" role="alert" aria-label="Run warnings"><i aria-hidden="true">!</i><div>{model.warnings?.map((warning) => <p key={`${warning.code}:${warning.section_id ?? "run"}`}>{warning.message}</p>)}</div></section>
     </section>}
     {model.diff && <section class="diff-overview"><h2>Comparison</h2><p>{model.diff.baseline_run_id} → {model.diff.candidate_run_id} · {model.diff.comparability_status}</p>{model.diff.warnings?.map((warning) => <p key={warning}>{warning}</p>)}</section>}
     <label class="report-search">Search analysis

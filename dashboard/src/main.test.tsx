@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./main";
@@ -57,6 +57,19 @@ describe("dashboard application", () => {
 
     expect(EventSourceStub.instances).toHaveLength(0);
     expect(screen.queryByText("degraded")).toBeNull();
+    const summary = screen.getByLabelText("Run summary");
+    expect(within(summary).getByText("Operations")).toBeTruthy();
+    expect(within(summary).getByText("Callbacks")).toBeTruthy();
+    expect(within(summary).getByText("Span")).toBeTruthy();
+    const overview = screen.getByLabelText("Report overview");
+    expect(overview.classList.contains("overview")).toBe(true);
+    expect(overview.querySelector(".overview-facts")).toBeNull();
+    expect(overview.textContent).toMatch(/Sources.*mythic/i);
+    expect(overview.textContent).toMatch(/Retention.*arguments/i);
+    expect(overview.textContent).not.toMatch(/Kind|Completed|Callbacks|Observed span/i);
+    expect(screen.queryByText(/No retention limitations reported/i)).toBeNull();
+    expect(screen.queryByLabelText("Previous runs")).toBeNull();
+    expect(screen.queryByText(/Previous run/i)).toBeNull();
   });
 
   it("opens an event stream only for a live run", async () => {
