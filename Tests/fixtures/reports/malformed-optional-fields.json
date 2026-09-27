@@ -122,6 +122,11 @@
           "succeeded": true,
           "tasks": [
             {
+              "argument_preview": {
+                "original_length": 17,
+                "retention": "all",
+                "text": "Rubeus.exe triage"
+              },
               "callback_id": "7",
               "command_name": "execute-assembly",
               "display_id": "100",
@@ -134,6 +139,11 @@
               "timestamp": "2026-07-27T15:00:00Z"
             },
             {
+              "argument_preview": {
+                "original_length": 17,
+                "retention": "all",
+                "text": "Rubeus.exe triage"
+              },
               "callback_id": "7",
               "command_name": "execute-assembly",
               "display_id": "101",
@@ -165,6 +175,11 @@
           "outlier_count": 1,
           "p95_seconds": 4.1,
           "slowest_task": {
+            "argument_preview": {
+              "original_length": 17,
+              "retention": "all",
+              "text": "Rubeus.exe triage"
+            },
             "callback_id": "7",
             "command_name": "execute-assembly",
             "display_id": "101",

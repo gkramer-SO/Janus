@@ -50,12 +50,17 @@ def section(kind: str, title: str, **data: object) -> dict:
     }
 
 
-def task(task_id: str = "101") -> dict:
+def task(task_id: str = "101", *, args: str = "Rubeus.exe triage") -> dict:
     return {
         "task_id": task_id,
         "display_id": task_id,
         "callback_id": "7",
         "command_name": "execute-assembly",
+        "argument_preview": {
+            "text": args,
+            "retention": "all",
+            "original_length": len(args),
+        },
         "timestamp": "2026-07-27T15:00:00Z",
         "link": {
             "label": f"Task {task_id}",
@@ -137,9 +142,9 @@ def complete_mythic() -> dict:
             "Outlier Context",
             outliers=[
                 {
-                    "task": task(),
+                    "task": task("101", args="Rubeus.exe triage"),
                     "duration_seconds": 4.25,
-                    "preceding": [task("100")],
+                    "preceding": [task("100", args="Seatbelt.exe -group=all")],
                     "following": [],
                     "sequence_signature": "sleep>execute-assembly",
                 }
@@ -237,6 +242,14 @@ def complete_mythic() -> dict:
                     "match_count": 6,
                     "unique_command_count": 1,
                     "artifact_path": "tool-dump/assembly-tools.ndjson",
+                    "entries": [
+                        task("110", args="Seatbelt.exe -group=all"),
+                        task("111", args="Rubeus.exe triage"),
+                        task("112", args="SharpHound.exe -c All"),
+                        task("113", args="Certify.exe find"),
+                        task("114", args="SharpUp.exe audit"),
+                        task("115", args="Seatbelt.exe OSInfo"),
+                    ],
                 }
             ],
         ),

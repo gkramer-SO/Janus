@@ -77,7 +77,7 @@ function Empty({ children }: { children: ComponentChildren }) {
 
 function TaskList({ tasks, empty }: { tasks: TaskRef[] | null | undefined; empty: string }) {
   if (!tasks?.length) return <Empty>{empty}</Empty>;
-  return <ul class="task-list">{tasks.map((task, index) => <li key={`${task.task_id}-${index}`}><Task task={task} />{task.argument_preview?.text && <code>{task.argument_preview.text}</code>}</li>)}</ul>;
+  return <ul class="task-list">{tasks.map((task, index) => <li key={`${task.task_id}-${index}`}><Task task={task} /><ToolInvocation task={task} /></li>)}</ul>;
 }
 
 function Detail({ label, children }: { label: string; children: ComponentChildren }) {
@@ -105,20 +105,52 @@ function smoothCurve(points: Array<[number, number]>): string {
   }, `M ${points[0][0]} ${points[0][1]}`);
 }
 
-function DwellDistribution({ data }: { data: Array<{ label: string; count?: number }> }) {
+function DwellDistribution({
+  data,
+  measurementCount,
+  medianSeconds,
+  p95Seconds,
+  maxSeconds,
+}: {
+  data: Array<{ label: string; count?: number }>;
+  measurementCount: number;
+  medianSeconds?: number | null;
+  p95Seconds?: number | null;
+  maxSeconds?: number | null;
+}) {
   const [active, setActive] = useState(0);
   const visible = data.map((bucket) => ({ ...bucket, count: bucket.count ?? 0 })).filter((bucket) => bucket.count > 0);
   const identity = visible.map((bucket) => `${bucket.label}:${bucket.count}`).join("|");
   useEffect(() => setActive(0), [identity]);
-  if (!visible.length) return null;
-  const total = visible.reduce((sum, bucket) => sum + bucket.count, 0);
+  const total = visible.reduce((sum, bucket) => sum + bucket.count, 0) || measurementCount;
+  const stats = <dl class="dwell-stats">
+    <div><dt>Measured</dt><dd>{measurementCount.toLocaleString()}</dd></div>
+    <div><dt>Median</dt><dd>{duration(medianSeconds)}</dd></div>
+    <div><dt>P95</dt><dd>{duration(p95Seconds)}</dd></div>
+    <div><dt>Maximum</dt><dd>{duration(maxSeconds)}</dd></div>
+  </dl>;
+  if (!visible.length) {
+    return <figure class="data-chart dwell-panel" aria-label="Dwell distribution">
+      <figcaption><span>Dwell distribution</span><small>{measurementCount} interval{measurementCount === 1 ? "" : "s"}</small></figcaption>
+      <p class="chart-question">How are operator pauses distributed across the engagement?</p>
+      {stats}
+    </figure>;
+  }
   const maximum = Math.max(...visible.map((bucket) => bucket.count));
   const selected = visible[active] ?? visible[0];
-  if (visible.length === 1) return <ChartFrame title="Dwell distribution" detail={`${total} interval${total === 1 ? "" : "s"}`} question="How are operator pauses distributed across the engagement?">
-    <div class="single-signal"><span>{selected.label}</span><strong>{selected.count} interval{selected.count === 1 ? "" : "s"}</strong></div>
-  </ChartFrame>;
+  if (visible.length === 1) {
+    return <figure class="data-chart dwell-panel" aria-label="Dwell distribution">
+      <figcaption><span>Dwell distribution</span><small>{total} interval{total === 1 ? "" : "s"}</small></figcaption>
+      <p class="chart-question">How are operator pauses distributed across the engagement?</p>
+      {stats}
+      <div class="single-signal"><span>{selected.label}</span><strong>{selected.count} interval{selected.count === 1 ? "" : "s"}</strong></div>
+    </figure>;
+  }
   const points = visible.map((bucket, index): [number, number] => [((index + .5) / visible.length) * 100, 88 - (bucket.count / maximum) * 72]);
-  return <ChartFrame title="Dwell distribution" detail={`${total} intervals`} question="How are operator pauses distributed across the engagement?">
+  return <figure class="data-chart dwell-panel" aria-label="Dwell distribution">
+    <figcaption><span>Dwell distribution</span><small>{total} intervals</small></figcaption>
+    <p class="chart-question">How are operator pauses distributed across the engagement?</p>
+    {stats}
     <div class="chart-readout" aria-live="polite"><span>{selected.label} operator pause</span><strong>{selected.count} · {percent(selected.count / total)}</strong></div>
     <div class="dwell-plot" style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(54px, 1fr))` }}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={smoothCurve(points)} /></svg>
@@ -127,7 +159,7 @@ function DwellDistribution({ data }: { data: Array<{ label: string; count?: numb
         <small>{bucket.label}</small>
       </button>)}
     </div>
-  </ChartFrame>;
+  </figure>;
 }
 
 export function DotPlot({ title, question, data, formatValue = text }: { title: string; question: string; data: ChartDatum[]; formatValue?: (value: number) => string }) {
@@ -162,17 +194,31 @@ export function DotPlot({ title, question, data, formatValue = text }: { title: 
 const ENTROPY_FLAG_THRESHOLD = 4.5;
 const ENTROPY_SCALE_MAX = 8;
 
+type EntropyFindingRow = NonNullable<Extract<ReportSection, { kind: "parameter-entropy" }>["findings"]>[number];
+
+function normalizeFindingType(findingType: string): string {
+  return findingType.replace(/-/g, "_");
+}
+
 function entropyKind(findingType: string): "high" | "low" {
-  return findingType === "low_entropy_for_expected_high_entropy_command" ? "low" : "high";
+  return normalizeFindingType(findingType) === "low_entropy_for_expected_high_entropy_command" ? "low" : "high";
 }
 
 function entropyKindLabel(findingType: string): string {
-  if (findingType === "high_entropy_token") return "High-entropy token";
-  if (findingType === "low_entropy_for_expected_high_entropy_command") return "Below expected entropy";
-  return findingType.replace(/_/g, " ");
+  const normalized = normalizeFindingType(findingType);
+  if (normalized === "high_entropy_token") return "High-entropy token";
+  if (normalized === "low_entropy_for_expected_high_entropy_command") return "Below expected entropy";
+  return normalized.replace(/_/g, " ");
 }
 
-export function EntropyPlot({ findings }: { findings: Array<{ label: string; value: number; findingType: string; token?: string | null }> }) {
+function entropyTone(finding: Pick<EntropyFindingRow, "finding_type" | "token_entropy">): "entropy-flag" | "entropy-low" | undefined {
+  if (finding.token_entropy === null || finding.token_entropy === undefined) return undefined;
+  if (entropyKind(finding.finding_type) === "low") return "entropy-low";
+  if (finding.token_entropy >= ENTROPY_FLAG_THRESHOLD) return "entropy-flag";
+  return undefined;
+}
+
+export function EntropyPlot({ findings }: { findings: Array<{ task: TaskRef; value: number; findingType: string; token?: string | null }> }) {
   const [active, setActive] = useState(0);
   const visible = [...findings]
     .filter((finding) => Number.isFinite(finding.value))
@@ -183,14 +229,20 @@ export function EntropyPlot({ findings }: { findings: Array<{ label: string; val
       return right.value - left.value;
     })
     .slice(0, 12);
-  const identity = visible.map((finding) => `${finding.label}:${finding.value}:${finding.findingType}`).join("|");
+  const identity = visible.map((finding) => `${finding.task.task_id}:${finding.value}:${finding.findingType}`).join("|");
   useEffect(() => setActive(0), [identity]);
   if (!visible.length) return null;
   const scaleMax = Math.max(ENTROPY_SCALE_MAX, ...visible.map((finding) => finding.value));
   const selected = visible[active] ?? visible[0];
   const mark = (bits: number) => `${(bits / scaleMax) * 100}%`;
   return <ChartFrame title="Shannon entropy by argument" detail={`${visible.length} scored finding${visible.length === 1 ? "" : "s"} · bits/char vs 4.5 flag`} question="Which arguments look encoded, or too weak for a command that should carry a blob?">
-    <div class="chart-readout" aria-live="polite"><span>{selected.token ? <code class="entropy-token">{selected.token}</code> : `${selected.label} · ${entropyKindLabel(selected.findingType)}`}</span><strong>{selected.value.toFixed(2)} bits/char</strong></div>
+    <div class="chart-readout entropy-readout" aria-live="polite">
+      <div>
+        <ToolInvocation task={selected.task} />
+        {selected.token ? <code class="entropy-cli">{selected.token}</code> : <small>{entropyKindLabel(selected.findingType)}</small>}
+      </div>
+      <strong>{selected.value.toFixed(2)} <span>bits/char</span></strong>
+    </div>
     <div class="entropy-plot">
       <div class="entropy-scale" aria-hidden="true">
         <span />
@@ -206,8 +258,12 @@ export function EntropyPlot({ findings }: { findings: Array<{ label: string; val
       {visible.map((finding, index) => {
         const kind = entropyKind(finding.findingType);
         const overFlag = finding.value >= ENTROPY_FLAG_THRESHOLD;
-        return <button type="button" class={`entropy-row${index === active ? " active" : ""}`} key={`${finding.label}-${index}`} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} aria-label={`${finding.label}, ${entropyKindLabel(finding.findingType)}: ${finding.value.toFixed(2)} bits per character${overFlag ? ", at or above the 4.5 flag threshold" : ""}`}>
-          <span title={finding.label}><strong>{finding.label}</strong><small>{finding.token || entropyKindLabel(finding.findingType)}</small></span>
+        const command = finding.task.command_name ?? "Task";
+        return <button type="button" class={`entropy-row${index === active ? " active" : ""}`} key={`${finding.task.task_id}-${index}`} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} aria-label={`${command}, ${entropyKindLabel(finding.findingType)}: ${finding.value.toFixed(2)} bits per character${overFlag ? ", at or above the 4.5 flag threshold" : ""}`}>
+          <span class="entropy-row-command">
+            <ToolInvocation task={finding.task} />
+            <small>{finding.token || entropyKindLabel(finding.findingType)}</small>
+          </span>
           <i class="entropy-track" aria-hidden="true">
             <em class="entropy-english" style={{ width: mark(4) }} />
             <b class={`entropy-bar ${kind}${overFlag ? " flagged" : ""}`} style={{ width: `${(finding.value / scaleMax) * 100}%` }} />
@@ -303,63 +359,67 @@ function outlierKey(row: OutlierRow): string {
   return `${row.task.task_id}-${row.task.display_id ?? ""}-${row.duration_seconds}`;
 }
 
-function ContextStep({ task, phase, selected = false }: { task: TaskRef; phase: "Before" | "Outlier" | "After"; selected?: boolean }) {
-  return <article class={`context-step${selected ? " selected" : ""}`}>
-    <small>{phase}</small>
-    <ToolInvocation task={task} />
-    <Task task={task} />
-  </article>;
+function outlierSequence(row: OutlierRow): string {
+  if (row.sequence_signature) return row.sequence_signature;
+  const before = (row.preceding ?? []).slice(-2).map((task) => task.command_name ?? "?");
+  const after = (row.following ?? []).slice(0, 2).map((task) => task.command_name ?? "?");
+  const center = row.task.command_name ? `[${row.task.command_name}]` : "[outlier]";
+  return [...before, center, ...after].join(" → ");
+}
+
+function OutlierContextList({ tasks, empty }: { tasks: TaskRef[]; empty: string }) {
+  if (!tasks.length) return <Empty>{empty}</Empty>;
+  return <ol class="outlier-context-list">{tasks.map((task, index) => <li key={`${task.task_id}-${index}`}><ToolInvocation task={task} /><Task task={task} /></li>)}</ol>;
 }
 
 function OutlierExplorer({ outliers }: { outliers: OutlierRow[] }) {
   const ranked = [...outliers].sort((left, right) => right.duration_seconds - left.duration_seconds);
-  const identity = ranked.map(outlierKey).join("|");
-  const [active, setActive] = useState(0);
-  useEffect(() => setActive(0), [identity]);
   if (!ranked.length) return <Empty>No duration outliers were detected.</Empty>;
-  const selected = ranked[active] ?? ranked[0];
-  const commandCount = new Set(ranked.map((row) => row.task.command_name ?? "Unknown command")).size;
-  const moveFocus = (index: number, key: string, container: HTMLElement) => {
-    let next = index;
-    if (key === "ArrowUp") next = Math.max(0, index - 1);
-    else if (key === "ArrowDown") next = Math.min(ranked.length - 1, index + 1);
-    else if (key === "Home") next = 0;
-    else if (key === "End") next = ranked.length - 1;
-    else return false;
-    setActive(next);
-    container.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
-    return true;
-  };
-  const sequence: Array<{ task: TaskRef; phase: "Before" | "Outlier" | "After"; selected?: boolean }> = [
-    ...(selected.preceding ?? []).map((task) => ({ task, phase: "Before" as const })),
-    { task: selected.task, phase: "Outlier", selected: true },
-    ...(selected.following ?? []).map((task) => ({ task, phase: "After" as const })),
-  ];
+  const longest = ranked[0]?.duration_seconds;
 
-  return <div class="outlier-explorer">
-    <p class="outlier-guidance">Duration marks the unusual task. Neighboring commands provide investigation context, not proof of causation.</p>
-    <div class="outlier-overview" aria-label="Outlier summary">
-      <div><span>Detected</span><strong>{ranked.length}</strong></div>
-      <div><span>Longest</span><strong>{duration(ranked[0].duration_seconds)}</strong></div>
-      <div><span>Commands</span><strong>{commandCount}</strong></div>
-    </div>
-    <div class="outlier-workspace">
-      <div class="outlier-picker" role="group" aria-label="Select an outlier task">
-        {ranked.map((row, index) => <button type="button" key={outlierKey(row)} class={index === active ? "active" : ""} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} onKeyDown={(event) => {
-          if (moveFocus(index, event.key, event.currentTarget.parentElement!)) event.preventDefault();
-        }} aria-pressed={index === active}>
-          <span><strong>{row.task.command_name ?? "Unknown command"}</strong><small>Task {row.task.display_id ?? row.task.task_id}</small></span>
-          <b>{duration(row.duration_seconds)}</b>
-        </button>)}
-      </div>
-      <article class="outlier-inspector" aria-live="polite">
-        <header><div><small>Selected outlier</small><ToolInvocation task={selected.task} /><Task task={selected.task} /></div><strong>{duration(selected.duration_seconds)}</strong></header>
-        <div class="context-sequence" role="group" aria-label={`Command context for task ${selected.task.display_id ?? selected.task.task_id}`}>
-          {sequence.map((step, index) => <div class="context-node" key={`${step.phase}-${step.task.task_id}-${index}`}>{index > 0 && <span class="context-arrow" aria-hidden="true">→</span>}<ContextStep {...step} /></div>)}
+  return <div class="outlier-panel">
+    <p class="outlier-guidance">Duration marks the unusual task. Neighboring commands are investigation context, not proof of causation.</p>
+    <dl class="outlier-stats">
+      <div><dt>Detected</dt><dd>{ranked.length.toLocaleString()}</dd></div>
+      <div><dt>Longest</dt><dd>{duration(longest)}</dd></div>
+    </dl>
+    <Table
+      searching={false}
+      label="Outlier Context"
+      headers={["Task", "Command", "Duration", "Sequence"]}
+      initialSortColumn={2}
+      initialSortDirection="descending"
+      rows={ranked.map((row) => ({
+        key: outlierKey(row),
+        values: [
+          <Task task={row.task} />,
+          <ToolInvocation task={row.task} />,
+          <strong class="dwell-value">{duration(row.duration_seconds)}</strong>,
+          <code class="sequence-inline">{outlierSequence(row)}</code>,
+        ],
+        sortValues: [
+          row.task.display_id ?? row.task.task_id,
+          row.task.command_name ?? "",
+          row.duration_seconds,
+          outlierSequence(row),
+        ],
+      }))}
+    />
+    <div class="detail-list">{ranked.filter((row) => (row.preceding?.length ?? 0) > 0 || (row.following?.length ?? 0) > 0).map((row) => {
+      const label = `${row.task.command_name ?? "Task"} · Task ${row.task.display_id ?? row.task.task_id} context`;
+      return <Detail key={outlierKey(row)} label={label}>
+        <div class="outlier-context" aria-label={`Command context for task ${row.task.display_id ?? row.task.task_id}`}>
+          <section>
+            <h3>Preceding</h3>
+            <OutlierContextList tasks={(row.preceding ?? []).slice(-3)} empty="No preceding tasks retained." />
+          </section>
+          <section>
+            <h3>Following</h3>
+            <OutlierContextList tasks={(row.following ?? []).slice(0, 3)} empty="No following tasks retained." />
+          </section>
         </div>
-        {selected.sequence_signature && <p class="sequence-signature"><span>Recorded sequence</span><code>{selected.sequence_signature}</code></p>}
-      </article>
-    </div>
+      </Detail>;
+    })}</div>
   </div>;
 }
 
@@ -430,7 +490,7 @@ function Table({
 }: {
   label: string;
   headers: string[];
-  rows: Array<{ key: string; values: ComponentChildren[]; sortValues?: unknown[] }>;
+  rows: Array<{ key: string; values: ComponentChildren[]; sortValues?: unknown[]; cellClasses?: Array<string | undefined> }>;
   searching: boolean;
   initialSortColumn?: number;
   initialSortDirection?: SortDirection;
@@ -450,8 +510,97 @@ function Table({
         else { setSortColumn(index); setDirection("ascending"); }
       }}>{header}{sortColumn === index ? (direction === "ascending" ? " ↑" : " ↓") : ""}</button>
     </th>)}</tr></thead>
-    <tbody>{ordered.map((row) => <tr key={row.key} data-search-match={searching ? "true" : undefined} tabIndex={searching ? -1 : undefined}>{row.values.map((value, index) => <td key={index}>{value}</td>)}</tr>)}</tbody>
+    <tbody>{ordered.map((row) => <tr key={row.key} data-search-match={searching ? "true" : undefined} tabIndex={searching ? -1 : undefined}>{row.values.map((value, index) => <td key={index} class={row.cellClasses?.[index]}>{value}</td>)}</tr>)}</tbody>
   </table>{ordered.length === 0 && <p class="empty">{searching ? "No rows match the active filter." : "No analyzer rows were reported."}</p>}</div>;
+}
+
+const CALLBACK_STATUS_COLORS_KEY = "janus.callback-health.status-colors";
+
+function readCallbackStatusColors(): boolean {
+  try {
+    return localStorage.getItem(CALLBACK_STATUS_COLORS_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function writeCallbackStatusColors(enabled: boolean): void {
+  try {
+    localStorage.setItem(CALLBACK_STATUS_COLORS_KEY, enabled ? "on" : "off");
+  } catch {
+    // Preference persistence is best-effort in restricted environments.
+  }
+}
+
+function CallbackHealthPanel({
+  section,
+  query,
+}: {
+  section: Extract<ReportSection, { kind: "callback-health" }>;
+  query: string;
+}) {
+  const [statusColors, setStatusColors] = useState(readCallbackStatusColors);
+  const callbacks = (section.callbacks ?? []).filter((row) => matches(row, query));
+  return <div class="callback-health">
+    <label class="view-toggle">
+      <input
+        type="checkbox"
+        checked={statusColors}
+        onChange={(event) => {
+          const enabled = event.currentTarget.checked;
+          setStatusColors(enabled);
+          writeCallbackStatusColors(enabled);
+        }}
+      />
+      Status colors
+    </label>
+    <Table
+      searching={Boolean(query)}
+      label={section.title}
+      headers={["Callback", "Tasks", "Success", "Errors", "Unknown", "Unclassified", "Completion", "Consecutive failures"]}
+      initialSortColumn={6}
+      initialSortDirection="ascending"
+      rows={callbacks.map((row) => {
+        const status = callbackStatus(row);
+        const statusCell = (tone: "success" | "error" | "unknown", value: number) =>
+          statusColors && value > 0 ? `status-cell ${tone}` : undefined;
+        return {
+          key: row.callback_id,
+          values: [
+            row.link ? <SafeAnchor link={row.link} /> : row.callback_id,
+            row.task_count,
+            status.success,
+            status.error,
+            status.unknown,
+            status.unclassified,
+            percent(row.completion_rate),
+            row.consecutive_failure_count ?? 0,
+          ],
+          sortValues: [
+            row.callback_display_id ?? row.callback_id,
+            row.task_count,
+            status.success,
+            status.error,
+            status.unknown,
+            status.unclassified,
+            row.completion_rate ?? -1,
+            row.consecutive_failure_count ?? 0,
+          ],
+          cellClasses: [
+            undefined,
+            undefined,
+            statusCell("success", status.success),
+            statusCell("error", status.error),
+            statusCell("unknown", status.unknown),
+            statusCell("unknown", status.unclassified),
+            undefined,
+            undefined,
+          ],
+        };
+      })}
+    />
+    <div class="detail-list">{callbacks.filter((row) => row.trailing_failures?.length || row.last_successful_task).map((row) => <Detail key={row.callback_id} label={`Callback ${row.callback_display_id ?? row.callback_id} context`}><p>{row.first_task_at ? new Date(row.first_task_at).toLocaleString() : "Unknown start"} → {row.last_task_at ? new Date(row.last_task_at).toLocaleString() : "unknown end"}</p>{row.last_successful_task && <p><strong>Last success:</strong> <Task task={row.last_successful_task} /></p>}<TaskList tasks={row.trailing_failures} empty="No trailing failures." /></Detail>)}</div>
+  </div>;
 }
 
 function KeyValueTable({ label, rows }: { label: string; rows: Array<{ label: string; value: ComponentChildren }> }) {
@@ -536,24 +685,75 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
       if (!candidates.length) return <Empty>No friction candidates match the active filter.</Empty>;
       return <><DotPlot title="Friction score by command" question="Which commands impose the most operator friction and deserve investigation first?" data={candidates.map((row) => ({ label: `${row.command_name} · ${row.sample_size} samples`, value: row.score, displayValue: row.score.toFixed(1) }))} /><div class="card-grid">{candidates.map((row) => <article class="finding-card" key={row.command_name} data-search-match={query ? "true" : undefined} tabIndex={query ? -1 : undefined}><h3>{row.command_name}</h3><strong>{row.score.toFixed(1)}</strong><p>{row.recommended_action}</p><small>{row.sample_size} samples · {row.confidence} confidence{row.suppressed ? " · action suppressed" : ""}</small><Detail label="Score evidence"><dl>{Object.entries(row.components ?? {}).map(([name, value]) => <><dt key={`${name}-label`}>{name}</dt><dd key={name}>{text(value)}</dd></>)}</dl>{row.drivers?.length ? <ul>{row.drivers.map((driver) => <li key={driver.component}><strong>{driver.label}:</strong> {text(driver.value)} ({text(driver.impact)} impact)</li>)}</ul> : <Empty>No score drivers.</Empty>}{[...(row.confidence_reasons ?? []), ...(row.limitations ?? [])].map((reason) => <p key={reason}>{reason}</p>)}</Detail></article>)}</div></>;
     }
-    case "callback-health": {
-      const callbacks = (section.callbacks ?? []).filter((row) => matches(row, query));
-      return <><Table searching={Boolean(query)} label={section.title} headers={["Callback", "Tasks", "Success", "Errors", "Unknown", "Unclassified", "Completion", "Consecutive failures"]} initialSortColumn={6} initialSortDirection="ascending" rows={callbacks.map((row) => { const status = callbackStatus(row); return { key: row.callback_id, values: [row.link ? <SafeAnchor link={row.link} /> : row.callback_id, row.task_count, status.success, status.error, status.unknown, status.unclassified, percent(row.completion_rate), row.consecutive_failure_count ?? 0], sortValues: [row.callback_display_id ?? row.callback_id, row.task_count, status.success, status.error, status.unknown, status.unclassified, row.completion_rate ?? -1, row.consecutive_failure_count ?? 0] }; })} />
-        <div class="detail-list">{callbacks.filter((row) => row.trailing_failures?.length || row.last_successful_task).map((row) => <Detail key={row.callback_id} label={`Callback ${row.callback_display_id ?? row.callback_id} context`}><p>{row.first_task_at ? new Date(row.first_task_at).toLocaleString() : "Unknown start"} → {row.last_task_at ? new Date(row.last_task_at).toLocaleString() : "unknown end"}</p>{row.last_successful_task && <p><strong>Last success:</strong> <Task task={row.last_successful_task} /></p>}<TaskList tasks={row.trailing_failures} empty="No trailing failures." /></Detail>)}</div></>;
-    }
+    case "callback-health":
+      return <CallbackHealthPanel section={section} query={query} />;
     case "av-tracker": {
       const detections = (section.detections ?? []).filter((row) => matches(row, query));
-      return <><p class="section-summary">Scanned {section.scanned_task_count ?? 0} process-list task(s); found {section.detections?.length ?? 0} detection row(s).</p><DotPlot title="Detections by vendor" question="Which security products were observed most often in retained process-list results?" data={detections.map((row) => ({ label: `${row.vendor} · ${(row.matched_executables ?? []).join(", ")}`, value: row.occurrence_count }))} /><Table searching={Boolean(query)} label={section.title} headers={["Vendor", "Executables", "Occurrences", "Status", "Task"]} rows={detections.map((row, index) => ({ key: `${row.vendor}-${index}`, values: [row.vendor, (row.matched_executables ?? []).join(", "), row.occurrence_count, text(row.status), <Task task={row.task} />], sortValues: [row.vendor, (row.matched_executables ?? []).join(", "), row.occurrence_count, row.status, row.task.display_id ?? row.task.task_id] }))} /></>;
+      const scanned = section.scanned_task_count ?? 0;
+      const reported = section.detections?.length ?? 0;
+      if (!detections.length) {
+        return <>
+          <p class="section-summary">Scanned <strong>{scanned.toLocaleString()}</strong> process-list task{scanned === 1 ? "" : "s"}.</p>
+          <Empty>{query ? "No detections match the active filter." : "No AV detections matched the registry."}</Empty>
+        </>;
+      }
+      return <>
+        <p class="section-summary">Scanned <strong>{scanned.toLocaleString()}</strong> process-list task{scanned === 1 ? "" : "s"}{detections.length !== reported ? ` · showing ${detections.length.toLocaleString()} of ${reported.toLocaleString()} detection${reported === 1 ? "" : "s"}` : ""}.</p>
+        {detections.length >= 2 && <DotPlot title="Detections by vendor" question="Which security products were observed most often in retained process-list results?" data={detections.map((row) => ({ label: `${row.vendor} · ${(row.matched_executables ?? []).join(", ")}`, value: row.occurrence_count }))} />}
+        <Table searching={Boolean(query)} label={section.title} headers={["Vendor", "Executables", "Occurrences", "Status", "Task"]} rows={detections.map((row, index) => ({ key: `${row.vendor}-${index}`, values: [row.vendor, (row.matched_executables ?? []).join(", "), row.occurrence_count, text(row.status), <Task task={row.task} />], sortValues: [row.vendor, (row.matched_executables ?? []).join(", "), row.occurrence_count, row.status, row.task.display_id ?? row.task.task_id] }))} />
+      </>;
     }
     case "dwell-time": {
       const measurements = (section.measurements ?? []).filter((row) => matches(row, query));
-      return <><dl class="inline-metrics"><dt>Measured intervals</dt><dd>{section.measurement_count ?? measurements.length}</dd><dt>Median</dt><dd>{duration(section.median_seconds)}</dd><dt>P95</dt><dd>{duration(section.p95_seconds)}</dd><dt>Maximum</dt><dd>{duration(section.max_seconds)}</dd></dl><DwellDistribution data={section.distribution ?? []} /><Table searching={Boolean(query)} label="Dwell intervals" headers={["Earlier task", "Next task", "Pause"]} rows={measurements.map((row, index) => ({ key: String(index), values: [<Task task={row.from_task} />, <Task task={row.to_task} />, <strong class="dwell-value">{duration(row.dwell_seconds)}</strong>], sortValues: [row.from_task.display_id ?? row.from_task.task_id, row.to_task.display_id ?? row.to_task.task_id, row.dwell_seconds] }))} /></>;
+      return <>
+        <DwellDistribution
+          data={section.distribution ?? []}
+          measurementCount={section.measurement_count ?? measurements.length}
+          medianSeconds={section.median_seconds}
+          p95Seconds={section.p95_seconds}
+          maxSeconds={section.max_seconds}
+        />
+        <Table searching={Boolean(query)} label="Dwell intervals" headers={["Earlier task", "Next task", "Pause"]} rows={measurements.map((row, index) => ({ key: String(index), values: [<Task task={row.from_task} />, <Task task={row.to_task} />, <strong class="dwell-value">{duration(row.dwell_seconds)}</strong>], sortValues: [row.from_task.display_id ?? row.from_task.task_id, row.to_task.display_id ?? row.to_task.task_id, row.dwell_seconds] }))} />
+      </>;
     }
     case "parameter-entropy": {
       const findings = (section.findings ?? []).filter((row) => matches(row, query));
       const repeated = (section.repeated_tokens ?? []).filter((row) => matches(row, query));
-      const entropyFindings = findings.filter((row) => row.token_entropy !== null && row.token_entropy !== undefined).map((row) => ({ label: `${row.task.command_name ?? "Task"} #${row.task.display_id ?? row.task.task_id}`, value: row.token_entropy ?? 0, findingType: row.finding_type, token: row.token }));
-      return <><EntropyPlot findings={entropyFindings} /><Table searching={Boolean(query)} label={section.title} headers={["Task", "Finding", "Token", "Entropy", "Detail"]} initialSortColumn={3} initialSortDirection="descending" rows={findings.map((row, index) => ({ key: String(index), values: [<Task task={row.task} />, row.finding_type, row.token ? <code class="entropy-token">{row.token}</code> : "—", text(row.token_entropy), row.detail], sortValues: [row.task.display_id ?? row.task.task_id, row.finding_type, row.token, row.token_entropy ?? -1, row.detail] }))} />{repeated.length > 0 && <Detail label={`${section.repeated_token_count ?? repeated.length} repeated high-entropy token(s)`}><Table searching={Boolean(query)} label="Repeated high-entropy tokens" headers={["Prefix", "Mean entropy", "Occurrences", "Commands", "Detail"]} rows={repeated.map((row) => ({ key: row.token_prefix, values: [row.token_prefix, text(row.entropy_mean), row.occurrences, (row.commands ?? []).join(", "), row.detail], sortValues: [row.token_prefix, row.entropy_mean, row.occurrences, (row.commands ?? []).join(", "), row.detail] }))} /></Detail>}</>;
+      const scored = findings.filter((row) => row.token_entropy !== null && row.token_entropy !== undefined);
+      return <>
+        {scored.length >= 2 && <EntropyPlot findings={scored.map((row) => ({ task: row.task, value: row.token_entropy ?? 0, findingType: row.finding_type, token: row.token }))} />}
+        <Table
+          searching={Boolean(query)}
+          label={section.title}
+          headers={["Command", "CLI input", "Entropy", "Finding", "Task", "Detail"]}
+          initialSortColumn={2}
+          initialSortDirection="descending"
+          rows={findings.map((row, index) => {
+            const tone = entropyTone(row);
+            return {
+              key: String(index),
+              values: [
+                <ToolInvocation task={row.task} />,
+                row.token ? <code class="entropy-cli">{row.token}</code> : "—",
+                text(row.token_entropy),
+                entropyKindLabel(row.finding_type),
+                <Task task={row.task} />,
+                row.detail,
+              ],
+              sortValues: [
+                `${row.task.command_name ?? ""} ${row.task.argument_preview?.text ?? ""}`,
+                row.token,
+                row.token_entropy ?? -1,
+                row.finding_type,
+                row.task.display_id ?? row.task.task_id,
+                row.detail,
+              ],
+              cellClasses: [undefined, undefined, tone ? `status-cell ${tone}` : undefined, undefined, undefined, undefined],
+            };
+          })}
+        />
+        {repeated.length > 0 && <Detail label={`${section.repeated_token_count ?? repeated.length} repeated high-entropy token(s)`}><Table searching={Boolean(query)} label="Repeated high-entropy tokens" headers={["Prefix", "Mean entropy", "Occurrences", "Commands", "Detail"]} rows={repeated.map((row) => ({ key: row.token_prefix, values: [row.token_prefix, text(row.entropy_mean), row.occurrences, (row.commands ?? []).join(", "), row.detail], sortValues: [row.token_prefix, row.entropy_mean, row.occurrences, (row.commands ?? []).join(", "), row.detail] }))} /></Detail>}
+      </>;
     }
     case "argument-position-profile": {
       const findings = (section.findings ?? []).filter((row) => matches(row, query));

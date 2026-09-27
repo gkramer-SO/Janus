@@ -355,6 +355,9 @@ def _analyze_sequence(
             "operation_id": task.get("operation_id", 0),
             "task_id": task["task_id"],
             "display_id": task.get("display_id", 0),
+            # Prefer the sequence group name so PTY shell retries surface the
+            # in-session command rather than the parent "pty" task name.
+            "command_name": command_name or task.get("command_name", ""),
             "timestamp": task["timestamp"],
             "status": status,
             "arguments_raw": task.get("arguments_raw", ""),

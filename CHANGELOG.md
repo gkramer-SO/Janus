@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-09-27
+
+### Added
+
+- **Readable command invocations**: Report task refs now flatten retained Mythic-style JSON argument bags into operator-readable previews (for example `Rubeus.exe triage`) via `Core/command_display.py`.
+- **Full invocation UI**: Dashboard task lists, entropy, outliers, retries, and tool-match tables show command name plus `argument_preview` through a shared `ToolInvocation` component.
+
+### Changed
+
+- **Outlier context**: Duration outliers use a ranked table with sequence signatures and preceding/following command lists instead of the stepwise inspector.
+- **Dwell distribution**: The dwell chart surfaces measured count, median, P95, and maximum beside the pause histogram.
+- **Retry attempt labels**: Retry sequences prefer the grouped command name (including PTY in-session shell lines) when attempt rows omit a command name.
+- **Report fixtures**: Generated fixtures and adapters include `argument_preview` so demos and parity tests match retained production commands.
+
+### Fixed
+
+- Parameter-entropy finding types that use hyphens instead of underscores still classify and label correctly in the dashboard.
+
 ## [1.5.0] - 2026-08-24
 
 ### Added

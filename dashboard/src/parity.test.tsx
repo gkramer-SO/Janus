@@ -43,15 +43,17 @@ describe("report migration parity", () => {
       expect(screen.getByText(title)).toBeTruthy();
     }
     expect(screen.getByText(/attempt context/i)).toBeTruthy();
-    expect(screen.getByRole("group", { name: /command context for task 101/i })).toBeTruthy();
+    expect(screen.getByLabelText(/command context for task 101/i)).toBeTruthy();
     expect(view.container.querySelector(".artifact-note")?.textContent).toMatch(/Exports:.*tool-dump\/assembly-tools.ndjson/i);
     expect(screen.queryByText(/0 repeated high-entropy token/i)).toBeNull();
     expect(screen.queryByText(/matched tasks/i)).toBeNull();
-    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(11);
+    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(9);
     for (const chart of view.container.querySelectorAll("figure.data-chart")) {
       expect(chart.querySelector(".chart-question")?.textContent?.trim()).toBeTruthy();
     }
     expect(view.container.querySelector(".outlier-guidance")?.textContent).toMatch(/context, not proof of causation/i);
+    expect(view.container.querySelector(".outlier-panel")).toBeTruthy();
+    expect(view.container.querySelector(".outlier-explorer")).toBeNull();
   });
 
   it("renders diff summary, findings, and entity presence from the diff fixture", () => {

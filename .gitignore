@@ -43,5 +43,6 @@ Config/janus.yml
 # Local virtualenv (uv/pip)
 .venv/
 
-# Local Claude Code Settings
+# Local Claude & Cursor Settings
 .claude/settings.local.json
+.cursor/rules/*.mdc 

@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from Core.analyzer_registry import ANALYZER_OUTPUTS
+from Core.command_display import format_argument_preview
 from Core.data_quality import build_data_quality
 from Core.report_model import REPORT_MODEL_VERSION, ReportModel
 
@@ -389,7 +390,14 @@ def _map_section(kind: str, data: dict[str, Any], source: str, endpoint: str | N
         sequences = []
         for value in data.get("retry_patterns") or []:
             transitions = [{"from_attempt": _int(row.get("from_attempt"), 1), "to_attempt": _int(row.get("to_attempt"), 2), "changes": [str(c) for c in row.get("changes") or []], "note": None} for row in value.get("argument_changes_structured") or []]
-            sequences.append({"command_name": str(value.get("command_name") or "unknown"), "attempts": max(1, _int(value.get("attempt_count"), 1)), "succeeded": value.get("final_status") == "success", "duration_seconds": _number(value.get("time_span_seconds")), "tasks": [_task_ref(row, endpoint) for row in value.get("attempts") or []], "final_status": _text(value.get("final_status")), "transitions": transitions, "intervening_tasks": [_task_ref(row, endpoint) for row in value.get("intervening_commands") or []]})
+            sequence_command = str(value.get("command_name") or "unknown")
+            attempt_tasks = []
+            for row in value.get("attempts") or []:
+                attempt = dict(row) if isinstance(row, dict) else {}
+                if not attempt.get("command_name") and not attempt.get("pty_shell_command"):
+                    attempt["command_name"] = sequence_command
+                attempt_tasks.append(_task_ref(attempt, endpoint))
+            sequences.append({"command_name": sequence_command, "attempts": max(1, _int(value.get("attempt_count"), 1)), "succeeded": value.get("final_status") == "success", "duration_seconds": _number(value.get("time_span_seconds")), "tasks": attempt_tasks, "final_status": _text(value.get("final_status")), "transitions": transitions, "intervening_tasks": [_task_ref(row, endpoint) for row in value.get("intervening_commands") or []]})
         section["sequences"] = sequences
     elif kind == "command-duration":
         commands = []
@@ -470,7 +478,18 @@ def _decode_output(text: str) -> tuple[str, bool]:
 def _task_ref(row: dict[str, Any], endpoint: str | None) -> dict[str, Any]:
     task_id = str(row.get("task_id") or "unknown")
     display = _text(row.get("display_id"))
-    return {"task_id": task_id, "display_id": display, "callback_id": _text(row.get("callback_id")), "command_name": _text(row.get("pty_shell_command") or row.get("command_name")), "argument_preview": _preview(row.get("arguments_raw"), row, "arguments"), "timestamp": _aware(row.get("timestamp")), "link": _task_link(task_id, display, endpoint)}
+    preview = _preview(row.get("arguments_raw"), row, "arguments")
+    # Prefer operator-readable argument text (e.g. Rubeus.exe triage) over raw JSON bags.
+    if preview and preview.get("retention") == "all" and row.get("arguments_raw"):
+        formatted = format_argument_preview(row.get("arguments_raw"), max_length=MAX_PREVIEW_CHARS)
+        if formatted:
+            preview = {
+                **preview,
+                "text": formatted,
+                "truncated": len(formatted) >= MAX_PREVIEW_CHARS,
+                "original_length": preview.get("original_length") or len(str(row.get("arguments_raw") or "")),
+            }
+    return {"task_id": task_id, "display_id": display, "callback_id": _text(row.get("callback_id")), "command_name": _text(row.get("pty_shell_command") or row.get("command_name")), "argument_preview": preview, "timestamp": _aware(row.get("timestamp")), "link": _task_link(task_id, display, endpoint)}
 
 
 def _mythic_base(bundle: dict[str, Any]) -> str | None:
