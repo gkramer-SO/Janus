@@ -7,6 +7,13 @@
           "title": "Command Name",
           "type": "string"
         },
+        "position_rows": {
+          "items": {
+            "$ref": "#/$defs/ArgumentPositionRow"
+          },
+          "title": "Position Rows",
+          "type": "array"
+        },
         "positions": {
           "default": 0,
           "minimum": 0,
@@ -45,11 +52,37 @@
           "title": "Mean Depth",
           "type": "number"
         },
+        "median_depth": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Depth"
+        },
         "min_depth": {
           "default": 0,
           "minimum": 0,
           "title": "Min Depth",
           "type": "integer"
+        },
+        "stdev_depth": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stdev Depth"
         },
         "task_count": {
           "default": 0,
@@ -98,6 +131,19 @@
           "title": "Depth Distribution",
           "type": "array"
         },
+        "finding_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finding Count"
+        },
         "findings": {
           "items": {
             "$ref": "#/$defs/ArgumentProfileFinding"
@@ -122,6 +168,32 @@
           "title": "Max Depth",
           "type": "integer"
         },
+        "mean_argument_depth": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Argument Depth"
+        },
+        "positions_profiled": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Positions Profiled"
+        },
         "sources": {
           "items": {
             "$ref": "#/$defs/SourceKind"
@@ -144,10 +216,36 @@
           "default": null,
           "title": "Status Reason"
         },
+        "tasks_with_arguments": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tasks With Arguments"
+        },
         "title": {
           "minLength": 1,
           "title": "Title",
           "type": "string"
+        },
+        "total_tasks": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Tasks"
         },
         "warnings": {
           "items": {
@@ -166,6 +264,47 @@
       "title": "ArgumentPositionProfileSection",
       "type": "object"
     },
+    "ArgumentPositionRow": {
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "minimum": 0,
+          "title": "Position",
+          "type": "integer"
+        },
+        "reach_pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Reach Pct",
+          "type": "number"
+        },
+        "tasks_reaching": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Tasks Reaching",
+          "type": "integer"
+        },
+        "top_values": {
+          "items": {
+            "$ref": "#/$defs/ArgumentValueCount"
+          },
+          "title": "Top Values",
+          "type": "array"
+        },
+        "unique_values": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unique Values",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "position"
+      ],
+      "title": "ArgumentPositionRow",
+      "type": "object"
+    },
     "ArgumentProfileFinding": {
       "additionalProperties": false,
       "properties": {
@@ -176,6 +315,11 @@
         "detail": {
           "title": "Detail",
           "type": "string"
+        },
+        "expected": {
+          "default": false,
+          "title": "Expected",
+          "type": "boolean"
         },
         "finding_type": {
           "title": "Finding Type",
@@ -234,6 +378,33 @@
         "detail"
       ],
       "title": "ArgumentProfileFinding",
+      "type": "object"
+    },
+    "ArgumentValueCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pct",
+          "type": "number"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ArgumentValueCount",
       "type": "object"
     },
     "AvDetectionRow": {
@@ -3304,7 +3475,7 @@
       "type": "array"
     },
     "report_model_version": {
-      "default": "1.1.0",
+      "default": "1.2.0",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "title": "Report Model Version",
       "type": "string"

@@ -219,17 +219,74 @@ def complete_mythic() -> dict:
             findings=[
                 {
                     "command_name": "execute-assembly",
-                    "position": 0,
-                    "finding_type": "static-argument",
-                    "occurrences": 6,
+                    "position": 1,
+                    "finding_type": "static_argument",
+                    "occurrences": 4,
                     "sample_size": 6,
-                    "ratio": 1,
-                    "detail": "Position 0 was constant.",
-                    "tasks": [task()],
-                }
+                    "ratio": 0.6667,
+                    "detail": "always Seatbelt.exe — 4/6 tasks (67%)",
+                    "expected": True,
+                    "tasks": [],
+                },
+                {
+                    "command_name": "execute-assembly",
+                    "position": 2,
+                    "finding_type": "high_diversity",
+                    "occurrences": 5,
+                    "sample_size": 6,
+                    "ratio": 0.8333,
+                    "detail": "5 unique values across 6 tasks (83% diversity)",
+                    "tasks": [],
+                },
             ],
             commands_profiled=1,
             max_depth=2,
+            total_tasks=8,
+            tasks_with_arguments=6,
+            mean_argument_depth=1.75,
+            positions_profiled=2,
+            finding_count=2,
+            depth_distribution=[
+                {
+                    "command_name": "execute-assembly",
+                    "task_count": 6,
+                    "min_depth": 1,
+                    "max_depth": 2,
+                    "mean_depth": 1.83,
+                    "median_depth": 2,
+                    "stdev_depth": 0.41,
+                }
+            ],
+            command_profiles=[
+                {
+                    "command_name": "execute-assembly",
+                    "task_count": 6,
+                    "positions": 2,
+                    "position_rows": [
+                        {
+                            "position": 1,
+                            "tasks_reaching": 6,
+                            "reach_pct": 100,
+                            "unique_values": 2,
+                            "top_values": [
+                                {"value": "Seatbelt.exe", "count": 4, "pct": 66.7},
+                                {"value": "Rubeus.exe", "count": 2, "pct": 33.3},
+                            ],
+                        },
+                        {
+                            "position": 2,
+                            "tasks_reaching": 6,
+                            "reach_pct": 100,
+                            "unique_values": 5,
+                            "top_values": [
+                                {"value": "-group=all", "count": 2, "pct": 33.3},
+                                {"value": "triage", "count": 1, "pct": 16.7},
+                                {"value": "OSInfo", "count": 1, "pct": 16.7},
+                            ],
+                        },
+                    ],
+                }
+            ],
         ),
         section(
             "tool-dump",

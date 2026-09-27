@@ -26,7 +26,7 @@ from pydantic import (
 )
 
 
-REPORT_MODEL_VERSION = "1.1.0"
+REPORT_MODEL_VERSION = "1.2.0"
 ReportId = Annotated[str, StringConstraints(min_length=1, pattern=r"^[A-Za-z0-9._:-]+$")]
 JsonScalar: TypeAlias = str | int | float | bool | None
 
@@ -298,12 +298,29 @@ class ArgumentDepthRow(StrictModel):
     min_depth: int = Field(default=0, ge=0)
     max_depth: int = Field(default=0, ge=0)
     mean_depth: float = Field(default=0, ge=0)
+    median_depth: float | None = Field(default=None, ge=0)
+    stdev_depth: float | None = Field(default=None, ge=0)
+
+
+class ArgumentValueCount(StrictModel):
+    value: str
+    count: int = Field(default=0, ge=0)
+    pct: float = Field(default=0, ge=0, le=100)
+
+
+class ArgumentPositionRow(StrictModel):
+    position: int = Field(ge=0)
+    tasks_reaching: int = Field(default=0, ge=0)
+    reach_pct: float = Field(default=0, ge=0, le=100)
+    unique_values: int = Field(default=0, ge=0)
+    top_values: list[ArgumentValueCount] = Field(default_factory=list)
 
 
 class ArgumentCommandProfile(StrictModel):
     command_name: str
     task_count: int = Field(default=0, ge=0)
     positions: int = Field(default=0, ge=0)
+    position_rows: list[ArgumentPositionRow] = Field(default_factory=list)
 
 
 class DiffSummary(StrictModel):
@@ -447,6 +464,7 @@ class ArgumentProfileFinding(StrictModel):
     sample_size: int = Field(default=0, ge=0)
     ratio: float | None = Field(default=None, ge=0, le=1)
     detail: str
+    expected: bool = False
     tasks: list[TaskRef] = Field(default_factory=list)
 
 
@@ -552,6 +570,11 @@ class ArgumentPositionProfileSection(SectionBase):
     findings: list[ArgumentProfileFinding] = Field(default_factory=list)
     commands_profiled: int = Field(default=0, ge=0)
     max_depth: int = Field(default=0, ge=0)
+    total_tasks: int | None = Field(default=None, ge=0)
+    tasks_with_arguments: int | None = Field(default=None, ge=0)
+    mean_argument_depth: float | None = Field(default=None, ge=0)
+    positions_profiled: int | None = Field(default=None, ge=0)
+    finding_count: int | None = Field(default=None, ge=0)
     depth_distribution: list[ArgumentDepthRow] = Field(default_factory=list)
     command_profiles: list[ArgumentCommandProfile] = Field(default_factory=list)
 

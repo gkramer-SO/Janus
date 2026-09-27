@@ -47,7 +47,8 @@ describe("report migration parity", () => {
     expect(view.container.querySelector(".artifact-note")?.textContent).toMatch(/Exports:.*tool-dump\/assembly-tools.ndjson/i);
     expect(screen.queryByText(/0 repeated high-entropy token/i)).toBeNull();
     expect(screen.queryByText(/matched tasks/i)).toBeNull();
-    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(9);
+    expect(screen.getAllByRole("figure").length).toBeGreaterThanOrEqual(8);
+    expect(screen.getByRole("table", { name: "execute-assembly argument positions" })).toBeTruthy();
     for (const chart of view.container.querySelectorAll("figure.data-chart")) {
       expect(chart.querySelector(".chart-question")?.textContent?.trim()).toBeTruthy();
     }

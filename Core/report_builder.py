@@ -424,7 +424,19 @@ def _map_section(kind: str, data: dict[str, Any], source: str, endpoint: str | N
         section.update(findings=[{"task": _task_ref(row, endpoint), "finding_type": str(row.get("finding_type") or "unknown"), "token_entropy": _number(row.get("token_entropy")), "token": _text(row.get("token")), "detail": str(row.get("detail") or "")} for row in data.get("findings") or []], repeated_token_count=_int(summary.get("repeated_high_entropy_tokens")), repeated_tokens=[{"token_prefix": str(row.get("token_prefix") or ""), "entropy_mean": _number(row.get("entropy_mean")), "occurrences": _int(row.get("occurrences")), "task_ids": [str(v) for v in row.get("task_ids") or []], "commands": [str(v) for v in row.get("commands") or []], "detail": str(row.get("detail") or "")} for row in data.get("repeated_high_entropy") or []])
     elif kind == "argument-position-profile":
         summary = data.get("summary") or {}
-        section.update(findings=[_argument_finding(row, endpoint) for row in data.get("findings") or []], commands_profiled=_int(summary.get("commands_profiled")), max_depth=_int(summary.get("max_depth_observed")), depth_distribution=[{"command_name": str(row.get("command_name") or "unknown"), "task_count": _int(row.get("task_count")), "min_depth": _int(row.get("min_depth")), "max_depth": _int(row.get("max_depth")), "mean_depth": _number(row.get("mean_depth")) or 0} for row in data.get("depth_distribution") or []], command_profiles=[{"command_name": str(name), "task_count": _int(value.get("task_count")), "positions": len(value.get("positions") or [])} for name, value in (data.get("per_command") or {}).items() if isinstance(value, dict)])
+        findings = [row for row in data.get("findings") or [] if isinstance(row, dict)]
+        section.update(
+            findings=[_argument_finding(row, endpoint) for row in findings],
+            commands_profiled=_int(summary.get("commands_profiled")),
+            max_depth=_int(summary.get("max_depth_observed")),
+            total_tasks=_optional_int(summary.get("total_tasks")),
+            tasks_with_arguments=_optional_int(summary.get("tasks_with_arguments")),
+            mean_argument_depth=_number(summary.get("mean_argument_depth")),
+            positions_profiled=_optional_int(summary.get("positions_profiled")),
+            finding_count=_int(summary.get("total_findings"), len(findings)),
+            depth_distribution=[{"command_name": str(row.get("command_name") or "unknown"), "task_count": _int(row.get("task_count")), "min_depth": _int(row.get("min_depth")), "max_depth": _int(row.get("max_depth")), "mean_depth": _number(row.get("mean_depth")) or 0, "median_depth": _number(row.get("median_depth")), "stdev_depth": _number(row.get("stdev_depth"))} for row in data.get("depth_distribution") or []],
+            command_profiles=[_argument_command_profile(name, value) for name, value in (data.get("per_command") or {}).items() if isinstance(value, dict)],
+        )
     elif kind == "tool-dump":
         section["groups"] = [{"id": _safe_id(str(row.get("name") or "group")), "name": str(row.get("name") or "Unnamed group"), "description": _text(row.get("description")), "match_count": _int(row.get("match_count")), "unique_command_count": _int(row.get("unique_command_count")), "artifact_path": _relative_artifact(row.get("dump_path")), "entries": [_task_ref(value, endpoint) for value in row.get("entries") or []]} for row in data.get("groups") or []]
     return section
@@ -438,7 +450,51 @@ def _argument_finding(row: dict[str, Any], endpoint: str | None) -> dict[str, An
     if ratio is None and row.get("reach_pct") is not None:
         ratio = _number(row.get("reach_pct"))
         ratio = ratio / 100 if ratio is not None else None
-    return {"command_name": str(row.get("command_name") or "unknown"), "position": _int(row.get("position")) if row.get("position") is not None else None, "finding_type": str(row.get("type") or "unknown"), "occurrences": _int(occurrences), "sample_size": _int(sample), "ratio": _number(ratio), "detail": json.dumps(row, sort_keys=True, ensure_ascii=False), "tasks": tasks}
+    return {"command_name": str(row.get("command_name") or "unknown"), "position": _int(row.get("position")) if row.get("position") is not None else None, "finding_type": str(row.get("type") or "unknown"), "occurrences": _int(occurrences), "sample_size": _int(sample), "ratio": _number(ratio), "detail": _argument_finding_detail(row), "expected": bool(row.get("expected")), "tasks": tasks}
+
+
+def _argument_finding_detail(row: dict[str, Any]) -> str:
+    kind = row.get("type")
+    if kind == "static_argument":
+        return f"always {row.get('value', '')} — {_int(row.get('occurrences'))}/{_int(row.get('tasks_at_position'))} tasks ({_pct(row.get('fraction'))})"
+    if kind == "unexpected_static_deviation":
+        values = ", ".join(f"{item.get('value')} ({_int(item.get('count'))}x)" for item in (row.get("deviating_values") or [])[:3] if isinstance(item, dict))
+        detail = f"expected {row.get('expected_value', '')} but {_int(row.get('deviation_count'))}/{_int(row.get('tasks_at_position'))} tasks deviate ({_number(row.get('deviation_pct')) or 0:g}%)"
+        return f"{detail}: {values}" if values else detail
+    if kind == "high_diversity":
+        return f"{_int(row.get('unique_values'))} unique values across {_int(row.get('tasks_at_position'))} tasks ({_pct(row.get('diversity_ratio'))} diversity)"
+    if kind == "depth_anomaly":
+        return f"depth {_int(row.get('min_depth'))}–{_int(row.get('max_depth'))}, mean {_number(row.get('mean_depth')) or 0:g}, CV {_number(row.get('cv')) or 0:.2f}"
+    if kind == "sparse_trailing":
+        return f"{_int(row.get('tasks_at_position'))}/{_int(row.get('total_command_tasks'))} tasks ({_number(row.get('reach_pct')) or 0:g}%)"
+    return str(row.get("detail") or "")
+
+
+def _pct(fraction: object) -> str:
+    return f"{(_number(fraction) or 0):.0%}"
+
+
+def _optional_int(value: object) -> int | None:
+    return _int(value) if value is not None else None
+
+
+def _argument_command_profile(name: object, value: dict[str, Any]) -> dict[str, Any]:
+    positions = [row for row in value.get("positions") or [] if isinstance(row, dict)]
+    return {
+        "command_name": str(name),
+        "task_count": _int(value.get("task_count")),
+        "positions": len(positions),
+        "position_rows": [
+            {
+                "position": _int(row.get("position")),
+                "tasks_reaching": _int(row.get("tasks_reaching")),
+                "reach_pct": min(100.0, _number(row.get("reach_pct")) or 0),
+                "unique_values": _int(row.get("unique_values")),
+                "top_values": [{"value": str(item.get("value", "")), "count": _int(item.get("count")), "pct": min(100.0, _number(item.get("pct")) or 0)} for item in (row.get("top_values") or [])[:3] if isinstance(item, dict)],
+            }
+            for row in positions
+        ],
+    }
 
 
 def _preview(value: object, record: dict[str, Any], prefix: str, *, decode: bool = False) -> dict[str, Any] | None:

@@ -64,7 +64,7 @@ def test_builder_shapes_sections_decodes_output_and_marks_missing(tmp_path) -> N
     assert result.ok
     assert result.model is not None
     document = result.model.model_dump(mode="json")
-    assert document["report_model_version"] == "1.1.0"
+    assert document["report_model_version"] == "1.2.0"
     assert document["revision"] == 7
     failure = next(section for section in document["sections"] if section["kind"] == "command-failure-summary")
     assert failure["commands"][0]["failures"][0]["output_preview"]["text"] == "hello"
@@ -172,3 +172,24 @@ def test_analyzer_adapter_field_parity(kind: str) -> None:
     assert section["status"] == "available"
     for path, expected in case["expected"].items():
         assert _field(section, path) == expected, f"{kind}: {path}"
+
+
+def test_argument_position_profile_maps_readable_findings_and_slots() -> None:
+    payload = {
+        "summary": {"total_tasks": 8, "tasks_with_arguments": 6, "commands_profiled": 1, "max_depth_observed": 2, "mean_argument_depth": 1.5, "positions_profiled": 2, "total_findings": 1},
+        "findings": [{"type": "static_argument", "command_name": "execute-assembly", "position": 1, "value": "Rubeus.exe", "occurrences": 6, "tasks_at_position": 6, "fraction": 1.0, "expected": True}],
+        "depth_distribution": [{"command_name": "execute-assembly", "task_count": 6, "min_depth": 1, "max_depth": 2, "mean_depth": 1.5, "median_depth": 1.5, "stdev_depth": 0.55}],
+        "per_command": {"execute-assembly": {"task_count": 6, "positions": [{"position": 1, "tasks_reaching": 6, "reach_pct": 100.0, "unique_values": 1, "top_values": [{"value": "Rubeus.exe", "count": 6, "pct": 100.0}]}]}},
+    }
+
+    section = _map_section("argument-position-profile", payload, "mythic", None)
+
+    finding = section["findings"][0]
+    assert finding["detail"] == "always Rubeus.exe — 6/6 tasks (100%)"
+    assert finding["expected"] is True
+    assert section["tasks_with_arguments"] == 6
+    assert section["finding_count"] == 1
+    assert section["depth_distribution"][0]["stdev_depth"] == 0.55
+    profile = section["command_profiles"][0]
+    assert profile["positions"] == 1
+    assert profile["position_rows"][0]["top_values"] == [{"value": "Rubeus.exe", "count": 6, "pct": 100.0}]

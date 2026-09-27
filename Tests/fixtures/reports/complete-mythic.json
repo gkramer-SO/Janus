@@ -449,46 +449,105 @@
       "warnings": []
     },
     {
+      "command_profiles": [
+        {
+          "command_name": "execute-assembly",
+          "position_rows": [
+            {
+              "position": 1,
+              "reach_pct": 100,
+              "tasks_reaching": 6,
+              "top_values": [
+                {
+                  "count": 4,
+                  "pct": 66.7,
+                  "value": "Seatbelt.exe"
+                },
+                {
+                  "count": 2,
+                  "pct": 33.3,
+                  "value": "Rubeus.exe"
+                }
+              ],
+              "unique_values": 2
+            },
+            {
+              "position": 2,
+              "reach_pct": 100,
+              "tasks_reaching": 6,
+              "top_values": [
+                {
+                  "count": 2,
+                  "pct": 33.3,
+                  "value": "-group=all"
+                },
+                {
+                  "count": 1,
+                  "pct": 16.7,
+                  "value": "triage"
+                },
+                {
+                  "count": 1,
+                  "pct": 16.7,
+                  "value": "OSInfo"
+                }
+              ],
+              "unique_values": 5
+            }
+          ],
+          "positions": 2,
+          "task_count": 6
+        }
+      ],
       "commands_profiled": 1,
       "confidence": "high",
+      "depth_distribution": [
+        {
+          "command_name": "execute-assembly",
+          "max_depth": 2,
+          "mean_depth": 1.83,
+          "median_depth": 2,
+          "min_depth": 1,
+          "stdev_depth": 0.41,
+          "task_count": 6
+        }
+      ],
+      "finding_count": 2,
       "findings": [
         {
           "command_name": "execute-assembly",
-          "detail": "Position 0 was constant.",
-          "finding_type": "static-argument",
-          "occurrences": 6,
-          "position": 0,
-          "ratio": 1,
+          "detail": "always Seatbelt.exe \u2014 4/6 tasks (67%)",
+          "expected": true,
+          "finding_type": "static_argument",
+          "occurrences": 4,
+          "position": 1,
+          "ratio": 0.6667,
           "sample_size": 6,
-          "tasks": [
-            {
-              "argument_preview": {
-                "original_length": 17,
-                "retention": "all",
-                "text": "Rubeus.exe triage"
-              },
-              "callback_id": "7",
-              "command_name": "execute-assembly",
-              "display_id": "101",
-              "link": {
-                "kind": "task",
-                "label": "Task 101",
-                "url": "https://mythic.local/new/task/101"
-              },
-              "task_id": "101",
-              "timestamp": "2026-07-27T15:00:00Z"
-            }
-          ]
+          "tasks": []
+        },
+        {
+          "command_name": "execute-assembly",
+          "detail": "5 unique values across 6 tasks (83% diversity)",
+          "finding_type": "high_diversity",
+          "occurrences": 5,
+          "position": 2,
+          "ratio": 0.8333,
+          "sample_size": 6,
+          "tasks": []
         }
       ],
       "id": "argument-position-profile",
       "kind": "argument-position-profile",
       "max_depth": 2,
+      "mean_argument_depth": 1.75,
+      "positions_profiled": 2,
       "sources": [
         "mythic"
       ],
       "status": "available",
+      "tasks_with_arguments": 6,
       "title": "Argument Position Profile",
+      "total_tasks": 8,
       "warnings": []
     },
     {

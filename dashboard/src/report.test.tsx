@@ -304,6 +304,44 @@ describe("report sections", () => {
     expect(view.container.querySelector(".entropy-cli")?.textContent).toBe("Y2hhbGxlbmdlLXRva2Vu");
   });
 
+  it("renders argument position findings and slots like the portable report", () => {
+    const section = {
+      id: "argument-position-profile",
+      title: "Argument Position Profile",
+      kind: "argument-position-profile",
+      status: "available",
+      commands_profiled: 2,
+      max_depth: 2,
+      total_tasks: 8,
+      tasks_with_arguments: 6,
+      mean_argument_depth: 1.75,
+      positions_profiled: 3,
+      finding_count: 2,
+      findings: [
+        { command_name: "ls", position: 1, finding_type: "high_diversity", occurrences: 5, sample_size: 6, ratio: 0.83, detail: "5 unique values across 6 tasks (83% diversity)" },
+        { command_name: "execute-assembly", position: 1, finding_type: "static_argument", occurrences: 6, sample_size: 6, ratio: 1, detail: "always Rubeus.exe — 6/6 tasks (100%)", expected: true },
+      ],
+      depth_distribution: [{ command_name: "pty_in_session::cd", task_count: 3, min_depth: 1, max_depth: 1, mean_depth: 1, median_depth: 1, stdev_depth: 0 }],
+      command_profiles: [{ command_name: "execute-assembly", task_count: 6, positions: 1, position_rows: [{ position: 1, tasks_reaching: 6, reach_pct: 100, unique_values: 1, top_values: [{ value: "Rubeus.exe", count: 6, pct: 100 }] }] }],
+    } as ReportSection;
+
+    const view = render(<SectionPanel section={section} query="" />);
+    expect(screen.queryByRole("figure", { name: "Finding ratio by command and position" })).toBeNull();
+    const stats = view.container.querySelector(".arg-stats")!;
+    expect(within(stats as HTMLElement).getByText("6 / 8")).toBeTruthy();
+    expect(within(stats as HTMLElement).getByText("Positions profiled")).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Argument Position Profile" });
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent?.replace(/[↑↓\s]/g, ""))).toEqual(["Type", "Command", "Position", "Detail"]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows[0].textContent).toContain("Static Arg");
+    expect(rows[0].textContent).toContain("expected");
+    expect(rows[1].textContent).toContain("High Diversity");
+    expect(screen.getByText("PTY ▸ cd")).toBeTruthy();
+    const slots = screen.getByRole("table", { name: "execute-assembly argument positions" });
+    expect(within(slots).getByText("Rubeus.exe")).toBeTruthy();
+    expect(within(slots).getByText("100%")).toBeTruthy();
+  });
+
   it("plots parameter entropy against the Shannon flag threshold instead of a ranked dot line", () => {
     const section = {
       id: "entropy",

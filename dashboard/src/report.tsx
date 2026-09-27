@@ -514,6 +514,87 @@ function Table({
   </table>{ordered.length === 0 && <p class="empty">{searching ? "No rows match the active filter." : "No analyzer rows were reported."}</p>}</div>;
 }
 
+const ARGUMENT_FINDING_TYPES: Record<string, { label: string; order: number }> = {
+  unexpected_static_deviation: { label: "Deviation", order: 0 },
+  static_argument: { label: "Static Arg", order: 1 },
+  depth_anomaly: { label: "Depth Anomaly", order: 2 },
+  high_diversity: { label: "High Diversity", order: 3 },
+  sparse_trailing: { label: "Sparse Trailing", order: 4 },
+};
+
+function argumentFindingType(kind: string): { label: string; order: number } {
+  return ARGUMENT_FINDING_TYPES[kind.replaceAll("-", "_")] ?? { label: kind, order: 99 };
+}
+
+function ArgumentCommand({ name }: { name: string }) {
+  if (!name.startsWith("pty_in_session::")) return <code>{name}</code>;
+  return <span class="arg-command-label"><code>PTY ▸ {name.slice("pty_in_session::".length)}</code><small>{name}</small></span>;
+}
+
+function slotPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
+}
+
+function ArgumentProfilePanel({ section, query }: { section: Extract<ReportSection, { kind: "argument-position-profile" }>; query: string }) {
+  const allFindings = section.findings ?? [];
+  const findings = allFindings.filter((row) => matches(row, query));
+  const depth = section.depth_distribution ?? [];
+  const profiles = section.command_profiles ?? [];
+  const slotProfiles = profiles.filter((row) => (row.position_rows ?? []).length > 0);
+  const hasPty = [...profiles, ...depth].some((row) => row.command_name.startsWith("pty_in_session::"));
+  const stats: Array<[string, string]> = [["Commands profiled", text(section.commands_profiled ?? 0)]];
+  if (section.tasks_with_arguments !== null && section.tasks_with_arguments !== undefined) {
+    stats.push(["Tasks with arguments", section.total_tasks !== null && section.total_tasks !== undefined ? `${section.tasks_with_arguments} / ${section.total_tasks}` : text(section.tasks_with_arguments)]);
+  }
+  stats.push(["Max depth", text(section.max_depth ?? 0)]);
+  if (section.mean_argument_depth !== null && section.mean_argument_depth !== undefined) stats.push(["Mean depth", text(section.mean_argument_depth)]);
+  if (section.positions_profiled !== null && section.positions_profiled !== undefined) stats.push(["Positions profiled", text(section.positions_profiled)]);
+  stats.push(["Findings", text(section.finding_count ?? allFindings.length)]);
+
+  return <div class="arg-profile">
+    <dl class="arg-stats">{stats.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    <p class="arg-guidance">Profiles argument structure across commands and positions. Static arguments are automation candidates, high-diversity slots show operator improvisation, depth anomalies flag inconsistent usage, and sparse trailing arguments are rarely supplied.</p>
+    {hasPty && <p class="arg-guidance"><strong>PTY in-session:</strong> each typed shell command has its own profile (keys like <code>pty_in_session::cd</code>), separate from the <code>pty_in_session</code> roll-up used in duration metrics.</p>}
+    {!allFindings.length && !depth.length && !profiles.length ? <Empty>No tasks with arguments found.</Empty> : <>
+      <h4 class="arg-heading">Findings <span>{section.finding_count ?? allFindings.length}</span></h4>
+      <Table
+        searching={Boolean(query)}
+        label={section.title}
+        headers={["Type", "Command", "Position", "Detail"]}
+        rows={findings.map((row, index) => {
+          const type = argumentFindingType(row.finding_type);
+          return {
+            key: `${row.command_name}-${row.position ?? "none"}-${row.finding_type}-${index}`,
+            values: [
+              <code class="arg-type">{type.label}</code>,
+              <ArgumentCommand name={row.command_name} />,
+              text(row.position),
+              <span class="arg-detail">
+                {row.detail || "—"}
+                {row.expected && <span class="arg-expected">expected</span>}
+                {(row.tasks ?? []).length > 0 && <small>Tasks: {(row.tasks ?? []).slice(0, 10).map((task, taskIndex) => <span key={`${task.task_id}-${taskIndex}`}>{taskIndex > 0 && ", "}<Task task={task} /></span>)}{(row.tasks ?? []).length > 10 && ` (+${(row.tasks ?? []).length - 10} more)`}</small>}
+              </span>,
+            ],
+            sortValues: [type.order * 100_000 + index, row.command_name, row.position ?? -1, row.detail],
+          };
+        })}
+      />
+      {slotProfiles.length > 0 ? <Detail label={`Per-command position breakdown (${slotProfiles.length} command${slotProfiles.length === 1 ? "" : "s"})`}>
+        <div class="arg-commands">{slotProfiles.map((profile) => <details class="arg-command" key={profile.command_name}>
+          <summary><ArgumentCommand name={profile.command_name} /><span>{profile.task_count ?? 0} task{profile.task_count === 1 ? "" : "s"} · {profile.positions ?? 0} position{profile.positions === 1 ? "" : "s"}</span></summary>
+          <Table searching={false} label={`${profile.command_name} argument positions`} headers={["Position", "Tasks", "Reach", "Unique values", "Top values"]} rows={(profile.position_rows ?? []).map((row) => ({
+            key: String(row.position),
+            values: [`#${row.position}`, row.tasks_reaching ?? 0, slotPercent(row.reach_pct), row.unique_values ?? 0, (row.top_values ?? []).length ? <span class="arg-values">{(row.top_values ?? []).map((value) => <span key={value.value}><code>{value.value}</code> {value.count ?? 0} ({slotPercent(value.pct)})</span>)}</span> : "—"],
+            sortValues: [row.position, row.tasks_reaching, row.reach_pct, row.unique_values, (row.top_values ?? [])[0]?.value ?? ""],
+          }))} />
+        </details>)}</div>
+      </Detail> : profiles.length > 0 && <Detail label={`Per-command profiles (${profiles.length})`}><Table searching={false} label="Per-command argument profiles" headers={["Command", "Tasks", "Positions"]} rows={profiles.map((row) => ({ key: row.command_name, values: [<ArgumentCommand name={row.command_name} />, row.task_count ?? 0, row.positions ?? 0], sortValues: [row.command_name, row.task_count, row.positions] }))} /></Detail>}
+      {depth.length > 0 && <Detail label={`Depth distribution by command (${depth.length} command${depth.length === 1 ? "" : "s"})`}><Table searching={false} label="Argument depth distribution" headers={["Command", "Tasks", "Min depth", "Max depth", "Mean", "Median", "Stdev"]} rows={depth.map((row) => ({ key: row.command_name, values: [<ArgumentCommand name={row.command_name} />, row.task_count ?? 0, row.min_depth ?? 0, row.max_depth ?? 0, text(row.mean_depth), text(row.median_depth), text(row.stdev_depth)], sortValues: [row.command_name, row.task_count, row.min_depth, row.max_depth, row.mean_depth, row.median_depth, row.stdev_depth] }))} /></Detail>}
+    </>}
+  </div>;
+}
+
 const CALLBACK_STATUS_COLORS_KEY = "janus.callback-health.status-colors";
 
 function readCallbackStatusColors(): boolean {
@@ -755,12 +836,8 @@ function SectionBody({ section, query }: { section: ReportSection; query: string
         {repeated.length > 0 && <Detail label={`${section.repeated_token_count ?? repeated.length} repeated high-entropy token(s)`}><Table searching={Boolean(query)} label="Repeated high-entropy tokens" headers={["Prefix", "Mean entropy", "Occurrences", "Commands", "Detail"]} rows={repeated.map((row) => ({ key: row.token_prefix, values: [row.token_prefix, text(row.entropy_mean), row.occurrences, (row.commands ?? []).join(", "), row.detail], sortValues: [row.token_prefix, row.entropy_mean, row.occurrences, (row.commands ?? []).join(", "), row.detail] }))} /></Detail>}
       </>;
     }
-    case "argument-position-profile": {
-      const findings = (section.findings ?? []).filter((row) => matches(row, query));
-      const depth = section.depth_distribution ?? [];
-      const profiles = section.command_profiles ?? [];
-      return <><p class="section-summary">Profiled {section.commands_profiled ?? 0} command(s), maximum argument depth {section.max_depth ?? 0}.</p><DotPlot title="Finding ratio by command and position" question="Which command positions show the strongest repeated argument pattern?" formatValue={(value) => percent(value)} data={findings.map((row) => ({ label: `${row.command_name} · position ${row.position ?? "—"} · ${row.finding_type}`, value: row.ratio ?? 0, displayValue: percent(row.ratio) }))} /><Table searching={Boolean(query)} label={section.title} headers={["Command", "Position", "Finding", "Occurrences", "Sample", "Ratio", "Detail"]} rows={findings.map((row, index) => ({ key: `${row.command_name}-${index}`, values: [row.command_name, text(row.position), row.finding_type, row.occurrences ?? 0, row.sample_size ?? 0, percent(row.ratio), row.detail], sortValues: [row.command_name, row.position, row.finding_type, row.occurrences ?? 0, row.sample_size ?? 0, row.ratio, row.detail] }))} />{depth.length > 0 && <Detail label="Depth distribution"><DotPlot title="Mean argument depth by command" question="Which commands carry the deepest retained argument structures?" data={depth.map((row) => ({ label: `${row.command_name} · ${row.min_depth ?? 0}–${row.max_depth ?? 0} range`, value: row.mean_depth ?? 0 }))} /><Table searching={false} label="Argument depth distribution" headers={["Command", "Tasks", "Minimum", "Maximum", "Mean"]} rows={depth.map((row) => ({ key: row.command_name, values: [row.command_name, row.task_count ?? 0, row.min_depth ?? 0, row.max_depth ?? 0, text(row.mean_depth)], sortValues: [row.command_name, row.task_count, row.min_depth, row.max_depth, row.mean_depth] }))} /></Detail>}{profiles.length > 0 && <Detail label="Per-command profiles"><Table searching={false} label="Per-command argument profiles" headers={["Command", "Tasks", "Positions"]} rows={profiles.map((row) => ({ key: row.command_name, values: [row.command_name, row.task_count ?? 0, row.positions ?? 0] }))} /></Detail>}</>;
-    }
+    case "argument-position-profile":
+      return <ArgumentProfilePanel section={section} query={query} />;
     case "tool-dump": {
       const groups = (section.groups ?? []).filter((row) => matches(row, query));
       if (!groups.length) return <Empty>No tool-dump groups match the active filter.</Empty>;
